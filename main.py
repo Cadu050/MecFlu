@@ -1,31 +1,33 @@
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-# Importacao das funcoes de calculo
-from calculos import (
-    calcular_vazao,
-    calcular_velocidade,
-    calcular_perda_carga,
-    calcular_reynolds,
-    classificar_regime
-)
-
-
+from calculos import *
 # ==================================================
-# CONFIGURACOES
+# CONFIGURAÇÕES (somente interface)
 # ==================================================
 
+# Cores
 COR_FUNDO = "#EAF0F6"
 COR_PRINCIPAL = "#17365D"
+COR_PRINCIPAL_HOVER = "#24508A"
 COR_SECUNDARIA = "#AAB7C4"
+COR_SECUNDARIA_HOVER = "#95A4B3"
 COR_TEXTO = "#222222"
+COR_TEXTO_SUAVE = "#6B7785"
 COR_BRANCO = "#FFFFFF"
+COR_BORDA = "#C5D1DD"
 
+# Fontes
 FONTE_TITULO = ("Arial", 15, "bold")
-FONTE_NORMAL = ("Arial", 11)
+FONTE_SUBTITULO = ("Arial", 10)
+FONTE_NORMAL = ("Arial", 12)
 FONTE_BOTAO = ("Arial", 12, "bold")
+FONTE_NOTA = ("Arial", 10, "italic")
+FONTE_CATEGORIA = ("Arial", 10, "bold")
 
+# Janela
+TAMANHO_JANELA = "480x620"
+TAMANHO_MINIMO = (480, 620)
 
 # ==================================================
 # CLASSE PRINCIPAL
@@ -37,13 +39,12 @@ class CalculadoraFluidos:
 
         self.root = root
 
-        self.root.title("Mecanica dos Fluidos")
-        self.root.geometry("550x620")
-        self.root.minsize(550, 620)
+        self.root.title("Mecânica dos Fluidos")
+        self.root.geometry(TAMANHO_JANELA)
+        self.root.minsize(*TAMANHO_MINIMO)
         self.root.configure(bg=COR_FUNDO)
 
         self.configurar_estilo()
-
         self.tela_inicial()
 
     # ==================================================
@@ -53,60 +54,207 @@ class CalculadoraFluidos:
     def configurar_estilo(self):
 
         estilo = ttk.Style()
-
         estilo.theme_use("clam")
 
-        estilo.configure(
-            "TCombobox",
-            font=FONTE_NORMAL,
-            padding=5
-        )
-
+        # Campos de texto: fundo branco, borda suave e destaque ao focar
         estilo.configure(
             "TEntry",
             font=FONTE_NORMAL,
-            padding=5
+            padding=6,
+            fieldbackground=COR_BRANCO,
+            foreground=COR_TEXTO,
+            bordercolor=COR_BORDA,
+            lightcolor=COR_BORDA,
+            darkcolor=COR_BORDA
         )
 
+        estilo.map(
+            "TEntry",
+            bordercolor=[("focus", COR_PRINCIPAL)],
+            lightcolor=[("focus", COR_PRINCIPAL)],
+            darkcolor=[("focus", COR_PRINCIPAL)]
+        )
+
+        # Lista de operações
+        estilo.configure(
+            "TCombobox",
+            font=FONTE_NORMAL,
+            padding=6,
+            fieldbackground=COR_BRANCO,
+            background=COR_SECUNDARIA,
+            foreground=COR_TEXTO,
+            arrowcolor=COR_PRINCIPAL,
+            bordercolor=COR_BORDA,
+            lightcolor=COR_BORDA,
+            darkcolor=COR_BORDA
+        )
+
+        estilo.map(
+            "TCombobox",
+            fieldbackground=[("readonly", COR_BRANCO)],
+            foreground=[("readonly", COR_TEXTO)],
+            bordercolor=[("focus", COR_PRINCIPAL)]
+        )
+
+        # Lista suspensa do combobox
+        self.root.option_add("*TCombobox*Listbox.font", FONTE_NORMAL)
+        self.root.option_add("*TCombobox*Listbox.selectBackground", COR_PRINCIPAL)
+        self.root.option_add("*TCombobox*Listbox.selectForeground", COR_BRANCO)
+
     # ==================================================
-    # CRIAR JANELAS
+    # COMPONENTES REUTILIZÁVEIS
     # ==================================================
+
+    def criar_cabecalho(self, pai, subtitulo=None):
+        """Faixa azul no topo com o título do sistema."""
+
+        faixa = tk.Frame(pai, bg=COR_PRINCIPAL)
+        faixa.pack(fill="x")
+
+        tk.Label(
+            faixa,
+            text="CALCULADORA DE MECÂNICA DOS FLUIDOS",
+            font=FONTE_TITULO,
+            bg=COR_PRINCIPAL,
+            fg=COR_BRANCO
+        ).pack(pady=(22, 4 if subtitulo else 22))
+
+        if subtitulo:
+            tk.Label(
+                faixa,
+                text=subtitulo,
+                font=FONTE_SUBTITULO,
+                bg=COR_PRINCIPAL,
+                fg=COR_SECUNDARIA
+            ).pack(pady=(0, 18))
 
     def criar_janela(self, titulo):
 
         janela = tk.Toplevel(self.root)
 
         janela.title(titulo)
-        janela.geometry("550x620")
-        janela.minsize(550, 620)
+        janela.geometry(TAMANHO_JANELA)
+        janela.minsize(*TAMANHO_MINIMO)
         janela.configure(bg=COR_FUNDO)
 
-        tk.Label(
-            janela,
-            text="CALCULADORA DE MECANICA DOS FLUIDOS",
-            font=FONTE_TITULO,
-            bg=COR_FUNDO,
-            fg=COR_PRINCIPAL
-        ).pack(pady=20)
+        self.criar_cabecalho(janela, titulo)
 
         return janela
 
-    # ==================================================
-    # CRIAR BOTOES
-    # ==================================================
-
     def criar_botao(self, pai, texto, comando, cor=COR_PRINCIPAL):
 
-        return tk.Button(
+        principal = cor == COR_PRINCIPAL
+        cor_hover = COR_PRINCIPAL_HOVER if principal else COR_SECUNDARIA_HOVER
+        cor_texto = COR_BRANCO if principal else COR_TEXTO
+
+        botao = tk.Button(
             pai,
             text=texto,
             font=FONTE_BOTAO,
             bg=cor,
-            fg=COR_BRANCO if cor == COR_PRINCIPAL else COR_TEXTO,
+            fg=cor_texto,
+            activebackground=cor_hover,
+            activeforeground=cor_texto,
+            relief="flat",
+            bd=0,
+            pady=8,
             width=22,
             command=comando,
             cursor="hand2"
         )
+
+        # Efeito ao passar o mouse
+        botao.bind("<Enter>", lambda e: botao.config(bg=cor_hover))
+        botao.bind("<Leave>", lambda e: botao.config(bg=cor))
+
+        return botao
+
+    def criar_menu(self, pai, titulo, apoio, botoes, voltar=None):
+        """Bloco de boas-vindas + botões, usado na tela inicial e em Bombas.
+
+        botoes: lista de (texto, comando).
+        voltar: comando opcional; se informado, adiciona o botão VOLTAR.
+        """
+
+        tk.Label(
+            pai,
+            text=titulo,
+            font=("Arial", 13),
+            bg=COR_FUNDO,
+            fg=COR_TEXTO
+        ).pack(pady=(30, 5))
+
+        tk.Label(
+            pai,
+            text=apoio,
+            font=FONTE_SUBTITULO,
+            bg=COR_FUNDO,
+            fg=COR_TEXTO_SUAVE
+        ).pack()
+
+        frame_botoes = tk.Frame(pai, bg=COR_FUNDO)
+        frame_botoes.pack(pady=25)
+
+        for texto, comando in botoes:
+            self.criar_botao(frame_botoes, texto, comando).pack(pady=12)
+
+        if voltar:
+            self.criar_botao(
+                frame_botoes,
+                "VOLTAR",
+                voltar,
+                COR_SECUNDARIA
+            ).pack(pady=(24, 12))
+
+    def criar_area_rolavel(self, pai):
+        """Área branca com barra de rolagem. Devolve o frame interno."""
+
+        moldura = tk.Frame(pai, bg=COR_FUNDO)
+        moldura.pack(fill="both", expand=True)
+
+        canvas = tk.Canvas(
+            moldura,
+            bg=COR_BRANCO,
+            highlightthickness=1,
+            highlightbackground=COR_BORDA
+        )
+
+        barra = ttk.Scrollbar(moldura, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=barra.set)
+
+        barra.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+
+        interno = tk.Frame(canvas, bg=COR_BRANCO)
+        janela_interna = canvas.create_window((0, 0), window=interno, anchor="nw")
+
+        # Ajusta a área rolável ao conteúdo e a largura ao canvas
+        interno.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        canvas.bind(
+            "<Configure>",
+            lambda e: canvas.itemconfigure(janela_interna, width=e.width)
+        )
+
+        # Roda do mouse (Windows/macOS e Linux)
+        def rolar(evento):
+
+            if not canvas.winfo_exists():
+                return
+
+            if evento.num == 4 or evento.delta > 0:
+                canvas.yview_scroll(-1, "units")
+            else:
+                canvas.yview_scroll(1, "units")
+
+        topo = pai.winfo_toplevel()
+        topo.bind("<MouseWheel>", rolar)
+        topo.bind("<Button-4>", rolar)
+        topo.bind("<Button-5>", rolar)
+
+        return interno
 
     # ==================================================
     # TELA INICIAL
@@ -114,96 +262,55 @@ class CalculadoraFluidos:
 
     def tela_inicial(self):
 
-        tk.Label(
-            self.root,
-            text="CALCULADORA DE MECANICA DOS FLUIDOS",
-            font=FONTE_TITULO,
-            bg=COR_FUNDO,
-            fg=COR_PRINCIPAL
-        ).pack(pady=35)
+        self.criar_cabecalho(self.root, "Cálculos e simulações para escoamentos")
 
-        tk.Label(
+        self.criar_menu(
             self.root,
-            text="Bem-vindo ao sistema!",
-            font=("Arial", 13),
-            bg=COR_FUNDO
-        ).pack(pady=15)
-
-        frame_botoes = tk.Frame(
-            self.root,
-            bg=COR_FUNDO
+            "Bem-vindo ao sistema!",
+            "Escolha uma das áreas abaixo para começar.",
+            [
+                ("BÁSICOS", self.abrir_basicos),
+                ("BOMBAS", self.abrir_bombas),
+                ("SIMULAÇÃO", self.abrir_simulacao),
+            ]
         )
 
-        frame_botoes.pack(pady=25)
-
-        self.criar_botao(
-            frame_botoes,
-            "BASICOS",
-            self.abrir_basicos
-        ).pack(pady=15)
-
-        self.criar_botao(
-            frame_botoes,
-            "BOMBAS",
-            self.abrir_bombas
-        ).pack(pady=15)
-
-        self.criar_botao(
-            frame_botoes,
-            "SIMULACAO",
-            self.abrir_simulacao
-        ).pack(pady=15)
-
     # ==================================================
-    # SECAO BASICOS
+    # SEÇÃO BÁSICOS
     # ==================================================
 
     def abrir_basicos(self):
 
-        janela = self.criar_janela("Calculos Basicos")
+        janela = self.criar_janela("Cálculos Básicos")
 
         # MENU
 
-        frame_menu = tk.Frame(
-            janela,
-            bg=COR_FUNDO
-        )
-
-        frame_menu.pack(pady=10)
+        frame_menu = tk.Frame(janela, bg=COR_FUNDO)
+        frame_menu.pack(pady=(18, 5))
 
         tk.Label(
             frame_menu,
-            text="Selecione a operacao:",
+            text="Selecione a operação:",
             font=FONTE_NORMAL,
-            bg=COR_FUNDO
+            bg=COR_FUNDO,
+            fg=COR_TEXTO
         ).pack()
-
-        operacoes = [
-            "Vazao",
-            "Velocidade media",
-            "Perda de carga distribuida",
-            "Numero de Reynolds"
-        ]
 
         selecao = ttk.Combobox(
             frame_menu,
-            values=operacoes,
+            values=list(OPERACOES),
             state="readonly",
             width=35,
             font=FONTE_NORMAL
         )
 
-        selecao.pack(pady=10)
+        selecao.pack(pady=8)
         selecao.current(0)
 
         # CAMPOS
 
-        frame_campos = tk.Frame(
-            janela,
-            bg=COR_FUNDO
-        )
-
-        frame_campos.pack(pady=10)
+        frame_campos = tk.Frame(janela, bg=COR_FUNDO)
+        frame_campos.pack(pady=5)
 
         campos = {}
 
@@ -211,30 +318,31 @@ class CalculadoraFluidos:
 
         frame_resultado = tk.LabelFrame(
             janela,
-            text="Resultado da operacao",
+            text=" Resultado da operação ",
             font=FONTE_NORMAL,
             bg=COR_BRANCO,
             fg=COR_PRINCIPAL,
+            bd=1,
+            relief="solid",
+            highlightthickness=0,
             padx=15,
-            pady=15
+            pady=12
         )
 
-        frame_resultado.pack(
-            fill="both",
-            padx=30,
-            pady=10
-        )
+        frame_resultado.pack(fill="x", padx=40, pady=12)
 
         resultado = tk.Label(
             frame_resultado,
-            text="Aguardando calculo...",
+            text="Aguardando cálculo...",
             font=FONTE_NORMAL,
             bg=COR_BRANCO,
             fg=COR_TEXTO,
-            justify="left"
+            justify="left",
+            anchor="nw",
+            height=7  # altura fixa: a janela não "pula" a cada cálculo
         )
 
-        resultado.pack(anchor="w")
+        resultado.pack(fill="x")
 
         # ------------------------------------------
         # CRIAR E LIMPAR CAMPOS
@@ -253,279 +361,336 @@ class CalculadoraFluidos:
                 frame_campos,
                 text=texto,
                 font=FONTE_NORMAL,
-                bg=COR_FUNDO
-            ).pack(anchor="w", pady=(8, 2))
+                bg=COR_FUNDO,
+                fg=COR_TEXTO
+            ).pack(anchor="w", pady=(7, 2))
 
-            entrada = ttk.Entry(
-                frame_campos,
-                width=40,
-                font=FONTE_NORMAL
-            )
-
+            entrada = ttk.Entry(frame_campos, width=40, font=FONTE_NORMAL)
             entrada.pack(pady=2)
 
             campos[nome] = entrada
 
         # ------------------------------------------
-        # MOSTRAR CAMPOS
+        # MOSTRAR CAMPOS (vindos de calculos.OPERACOES)
         # ------------------------------------------
 
         def mostrar_campos(event=None):
 
             limpar_campos()
 
-            operacao = selecao.get()
+            for nome, texto in OPERACOES[selecao.get()]["campos"]:
+                criar_campo(nome, texto)
 
-            if operacao == "Vazao":
+            resultado.config(text="Aguardando cálculo...")
 
-                criar_campo("volume", "Volume do fluido (m³):")
-                criar_campo("tempo", "Tempo de vazao (min):")
-
-            elif operacao == "Velocidade media":
-
-                criar_campo("tempo_ini", "Tempo inicial (min):")
-                criar_campo("tempo_fin", "Tempo final (min):")
-                criar_campo("pos_ini", "Posicao inicial (m):")
-                criar_campo("pos_fin", "Posicao final (m):")
-
-            elif operacao == "Perda de carga distribuida":
-
-                criar_campo("atrito", "Fator de atrito:")
-                criar_campo("comprimento", "Comprimento da tubulacao (m):")
-                criar_campo("diametro", "Diametro interno (m):")
-                criar_campo("velocidade", "Velocidade media (m/s):")
-
-            elif operacao == "Numero de Reynolds":
-
-                criar_campo("densidade", "Densidade do fluido (kg/m³):")
-                criar_campo("velocidade", "Velocidade media (m/s):")
-                criar_campo("diametro", "Diametro do tubo (m):")
-                criar_campo("viscosidade", "Viscosidade dinamica (Pa.s):")
-
-            resultado.config(text="Aguardando calculo...")
-
-        selecao.bind(
-            "<<ComboboxSelected>>",
-            mostrar_campos
-        )
+        selecao.bind("<<ComboboxSelected>>", mostrar_campos)
 
         # ------------------------------------------
         # CALCULAR
         # ------------------------------------------
 
+        def ler_valor(entrada):
+
+            try:
+                return float(entrada.get().replace(",", "."))
+
+            except ValueError:
+                raise ValueError("Digite valores numéricos válidos.")
+
         def calcular():
 
             try:
+                valores = {
+                    nome: ler_valor(entrada)
+                    for nome, entrada in campos.items()
+                }
 
-                def valor(nome):
-
-                    return float(
-                        campos[nome].get().replace(",", ".")
-                    )
-
-                operacao = selecao.get()
-
-                if operacao == "Vazao":
-
-                    volume = valor("volume")
-                    tempo = valor("tempo")
-
-                    q = calcular_vazao(volume, tempo)
-
-                    mensagem = (
-                        "VAZAO DO FLUIDO\n\n"
-                        f"Volume: {volume} m³\n"
-                        f"Tempo: {tempo} min\n\n"
-                        f"Vazao: {q:.6f} m³/s"
-                    )
-
-                elif operacao == "Velocidade media":
-
-                    ti = valor("tempo_ini")
-                    tf = valor("tempo_fin")
-                    pi = valor("pos_ini")
-                    pf = valor("pos_fin")
-
-                    espaco, tempo, velocidade = calcular_velocidade(
-                        ti, tf, pi, pf
-                    )
-
-                    mensagem = (
-                        "VELOCIDADE MEDIA\n\n"
-                        f"Variacao de espaco: {espaco} m\n"
-                        f"Variacao de tempo: {tempo} s\n\n"
-                        f"Velocidade media: {velocidade:.4f} m/s"
-                    )
-
-                elif operacao == "Perda de carga distribuida":
-
-                    f = valor("atrito")
-                    L = valor("comprimento")
-                    D = valor("diametro")
-                    v = valor("velocidade")
-
-                    perda = calcular_perda_carga(f, L, D, v)
-
-                    mensagem = (
-                        "PERDA DE CARGA DISTRIBUIDA\n\n"
-                        f"Comprimento: {L} m\n"
-                        f"Diametro: {D} m\n\n"
-                        f"Perda de carga: {perda:.4f} m"
-                    )
-
-                elif operacao == "Numero de Reynolds":
-
-                    d = valor("densidade")
-                    v = valor("velocidade")
-                    D = valor("diametro")
-                    mi = valor("viscosidade")
-
-                    re = calcular_reynolds(d, v, D, mi)
-
-                    regime = classificar_regime(re)
-
-                    mensagem = (
-                        "NUMERO DE REYNOLDS\n\n"
-                        f"Reynolds: {re:.2f}\n\n"
-                        f"Regime: {regime}"
-                    )
-
-                resultado.config(text=mensagem)
+                resultado.config(
+                    text=executar_operacao(selecao.get(), valores)
+                )
 
             except ValueError as erro:
 
                 messagebox.showerror(
                     "Erro de entrada",
-                    str(erro) or "Digite valores numericos validos.",
+                    str(erro),
                     parent=janela
                 )
-
-        # ------------------------------------------
-        # BOTOES
-        # ------------------------------------------
-
-        self.criar_botao(
-            janela,
-            "CALCULAR",
-            calcular
-        ).pack(pady=15)
 
         def limpar():
 
             for entrada in campos.values():
                 entrada.delete(0, tk.END)
 
-            resultado.config(
-                text="Aguardando calculo..."
-            )
+            resultado.config(text="Aguardando cálculo...")
+
+        # ------------------------------------------
+        # BOTÕES
+        # ------------------------------------------
+
+        self.criar_botao(janela, "CALCULAR", calcular).pack(pady=(8, 8))
 
         self.criar_botao(
             janela,
             "LIMPAR CAMPOS",
             limpar,
             COR_SECUNDARIA
-        ).pack(pady=5)
+        ).pack(pady=(0, 15))
+
+        # Enter também calcula
+        janela.bind("<Return>", lambda e: calcular())
 
         mostrar_campos()
 
     # ==================================================
-    # SECAO BOMBAS
+    # SEÇÃO BOMBAS
     # ==================================================
 
-    def abrir_bombas(self):
+    def criar_tela_em_desenvolvimento(self, titulo_janela, titulo, descricao):
 
-        janela = self.criar_janela("Calculos de Bombas")
+        janela = self.criar_janela(titulo_janela)
 
         tk.Label(
             janela,
-            text="MODULO DE BOMBAS",
+            text=titulo,
             font=("Arial", 14, "bold"),
             bg=COR_FUNDO,
             fg=COR_PRINCIPAL
-        ).pack(pady=35)
+        ).pack(pady=(40, 20))
 
         tk.Label(
             janela,
-            text=(
-                "Area destinada aos calculos de bombas.\n\n"
-                "Futuramente serao adicionadas ferramentas\n"
-                "para analise e dimensionamento de bombas."
-            ),
+            text=descricao,
             font=FONTE_NORMAL,
             bg=COR_FUNDO,
             fg=COR_TEXTO,
             justify="center"
-        ).pack(pady=20)
+        ).pack(pady=15)
 
         tk.Label(
             janela,
             text="Funcionalidades em desenvolvimento",
-            font=("Arial", 10, "italic"),
+            font=FONTE_NOTA,
             bg=COR_FUNDO,
-            fg="#777777"
-        ).pack(pady=20)
+            fg=COR_TEXTO_SUAVE
+        ).pack(pady=15)
 
         self.criar_botao(
             janela,
             "VOLTAR",
             janela.destroy,
             COR_SECUNDARIA
-        ).pack(pady=35)
+        ).pack(pady=30)
+
+    def abrir_bombas(self):
+
+        janela = self.criar_janela("Cálculos de Bombas")
+
+        def abrir_topico(topico):
+            self.criar_tela_em_desenvolvimento(
+                topico,
+                topico.upper(),
+            )
+
+        # Mesmo formato da tela inicial; os tópicos vêm de calculos.py
+        self.criar_menu(
+            janela,
+            "Bem-vindo ao módulo de bombas!",
+            "Escolha uma das áreas abaixo.",
+            [
+                (topico.upper(), lambda t=topico: abrir_topico(t))
+                for topico in TOPICOS_BOMBAS
+            ],
+            voltar=janela.destroy
+        )
 
     # ==================================================
-    # SECAO SIMULACAO
+    # SEÇÃO SIMULAÇÃO
     # ==================================================
 
     def abrir_simulacao(self):
 
-        janela = self.criar_janela("Simulacao")
+        janela = self.criar_janela("Simulação")
 
-        tk.Label(
-            janela,
-            text="MODULO DE SIMULACAO",
-            font=("Arial", 14, "bold"),
-            bg=COR_FUNDO,
-            fg=COR_PRINCIPAL
-        ).pack(pady=35)
+        conteudo = tk.Frame(janela, bg=COR_FUNDO)
+        conteudo.pack(fill="both", expand=True, padx=30, pady=(15, 15))
 
-        tk.Label(
-            janela,
-            text=(
-                "Area destinada as simulacoes de\n"
-                "mecanica dos fluidos.\n\n"
-                "Futuramente serao adicionadas ferramentas\n"
-                "de visualizacao e analise de escoamentos."
-            ),
-            font=FONTE_NORMAL,
-            bg=COR_FUNDO,
-            fg=COR_TEXTO,
-            justify="center"
-        ).pack(pady=20)
+        # Variáveis vindas de calculos.VARIAVEIS_SIMULACAO
+        rotulos = {
+            chave: rotulo
+            for variaveis in VARIAVEIS_SIMULACAO.values()
+            for chave, rotulo in variaveis
+        }
 
-        tk.Label(
-            janela,
-            text="Funcionalidades em desenvolvimento",
-            font=("Arial", 10, "italic"),
-            bg=COR_FUNDO,
-            fg="#777777"
-        ).pack(pady=20)
+        selecionadas = {chave: tk.BooleanVar(value=False) for chave in rotulos}
+        valores = {chave: tk.StringVar() for chave in rotulos}
 
-        self.criar_botao(
-            janela,
-            "VOLTAR",
-            janela.destroy,
-            COR_SECUNDARIA
-        ).pack(pady=35)
+        def limpar_conteudo():
+
+            for widget in conteudo.winfo_children():
+                widget.destroy()
+
+        def criar_textos(titulo, apoio):
+
+            tk.Label(
+                conteudo,
+                text=titulo,
+                font=FONTE_NORMAL,
+                bg=COR_FUNDO,
+                fg=COR_PRINCIPAL
+            ).pack(anchor="w")
+
+            tk.Label(
+                conteudo,
+                text=apoio,
+                font=FONTE_NOTA,
+                bg=COR_FUNDO,
+                fg=COR_TEXTO_SUAVE
+            ).pack(anchor="w", pady=(0, 8))
+
+        # ------------------------------------------
+        # ETAPA 1: CHECKLIST
+        # ------------------------------------------
+
+        def limpar_selecao():
+
+            for variavel in selecionadas.values():
+                variavel.set(False)
+
+        def continuar():
+
+            escolhidas = [
+                chave for chave, variavel in selecionadas.items()
+                if variavel.get()
+            ]
+
+            if not escolhidas:
+
+                messagebox.showwarning(
+                    "Nenhuma variável",
+                    "Marque ao menos uma variável para continuar.",
+                    parent=janela
+                )
+
+                return
+
+            mostrar_valores(escolhidas)
+
+        def mostrar_checklist():
+
+            limpar_conteudo()
+
+            criar_textos(
+                "Quais variáveis você já possui?",
+                "Marque as caixas correspondentes e clique em continuar."
+            )
+
+            botoes = tk.Frame(conteudo, bg=COR_FUNDO)
+            botoes.pack(side="bottom", pady=(12, 0))
+
+            self.criar_botao(botoes, "CONTINUAR", continuar).pack(pady=(0, 8))
+
+            self.criar_botao(
+                botoes,
+                "LIMPAR SELEÇÃO",
+                limpar_selecao,
+                COR_SECUNDARIA
+            ).pack()
+
+            area = self.criar_area_rolavel(conteudo)
+
+            for categoria, variaveis in VARIAVEIS_SIMULACAO.items():
+
+                tk.Label(
+                    area,
+                    text=categoria.upper(),
+                    font=FONTE_CATEGORIA,
+                    bg=COR_BRANCO,
+                    fg=COR_PRINCIPAL
+                ).pack(anchor="w", padx=12, pady=(12, 2))
+
+                for chave, rotulo in variaveis:
+
+                    tk.Checkbutton(
+                        area,
+                        text=rotulo,
+                        variable=selecionadas[chave],
+                        font=FONTE_NORMAL,
+                        bg=COR_BRANCO,
+                        fg=COR_TEXTO,
+                        activebackground=COR_BRANCO,
+                        selectcolor=COR_BRANCO,
+                        anchor="w",
+                        bd=0,
+                        highlightthickness=0,
+                        cursor="hand2"
+                    ).pack(fill="x", padx=12)
+
+        # ------------------------------------------
+        # ETAPA 2: VALORES DAS VARIÁVEIS ESCOLHIDAS
+        # ------------------------------------------
+
+        def confirmar():
+
+            messagebox.showinfo(
+                "Simulação",
+                "Valores registrados.\n"
+                "A simulação será adicionada em breve.",
+                parent=janela
+            )
+
+        def mostrar_valores(escolhidas):
+
+            limpar_conteudo()
+
+            criar_textos(
+                "Informe os valores das variáveis:",
+                "Use ponto ou vírgula para decimais."
+            )
+
+            botoes = tk.Frame(conteudo, bg=COR_FUNDO)
+            botoes.pack(side="bottom", pady=(12, 0))
+
+            self.criar_botao(
+                botoes,
+                "CONFIRMAR VALORES",
+                confirmar
+            ).pack(pady=(0, 8))
+
+            self.criar_botao(
+                botoes,
+                "VOLTAR",
+                mostrar_checklist,
+                COR_SECUNDARIA
+            ).pack()
+
+            area = self.criar_area_rolavel(conteudo)
+
+            for chave in escolhidas:
+
+                tk.Label(
+                    area,
+                    text=rotulos[chave],
+                    font=FONTE_NORMAL,
+                    bg=COR_BRANCO,
+                    fg=COR_TEXTO
+                ).pack(anchor="w", padx=12, pady=(10, 2))
+
+                ttk.Entry(
+                    area,
+                    textvariable=valores[chave],
+                    font=FONTE_NORMAL
+                ).pack(fill="x", padx=12, pady=(0, 4))
+
+        mostrar_checklist()
 
 
 # ==================================================
-# INICIALIZACAO DO PROGRAMA
+# INICIALIZAÇÃO DO PROGRAMA
 # ==================================================
 
 if __name__ == "__main__":
 
     root = tk.Tk()
-
     app = CalculadoraFluidos(root)
-
     root.mainloop()
