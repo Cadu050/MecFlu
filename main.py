@@ -43,7 +43,6 @@ class CalculadoraFluidos:
         self.root.geometry(TAMANHO_JANELA)
         self.root.minsize(*TAMANHO_MINIMO)
         self.root.configure(bg=COR_FUNDO)
-
         self.configurar_estilo()
         self.tela_inicial()
 
@@ -56,7 +55,7 @@ class CalculadoraFluidos:
         estilo = ttk.Style()
         estilo.theme_use("clam")
 
-        # Campos de texto: fundo branco, borda suave e destaque ao focar
+        # Campos de texto
         estilo.configure(
             "TEntry",
             font=FONTE_NORMAL,
@@ -106,7 +105,6 @@ class CalculadoraFluidos:
     # ==================================================
 
     def criar_cabecalho(self, pai, subtitulo=None):
-        """Faixa azul no topo com o título do sistema."""
 
         faixa = tk.Frame(pai, bg=COR_PRINCIPAL)
         faixa.pack(fill="x")
@@ -162,19 +160,13 @@ class CalculadoraFluidos:
             command=comando,
             cursor="hand2"
         )
-
-        # Efeito ao passar o mouse
+  
         botao.bind("<Enter>", lambda e: botao.config(bg=cor_hover))
         botao.bind("<Leave>", lambda e: botao.config(bg=cor))
 
         return botao
 
     def criar_menu(self, pai, titulo, apoio, botoes, voltar=None):
-        """Bloco de boas-vindas + botões, usado na tela inicial e em Bombas.
-
-        botoes: lista de (texto, comando).
-        voltar: comando opcional; se informado, adiciona o botão VOLTAR.
-        """
 
         tk.Label(
             pai,
@@ -207,7 +199,6 @@ class CalculadoraFluidos:
             ).pack(pady=(24, 12))
 
     def criar_area_rolavel(self, pai):
-        """Área branca com barra de rolagem. Devolve o frame interno."""
 
         moldura = tk.Frame(pai, bg=COR_FUNDO)
         moldura.pack(fill="both", expand=True)
@@ -339,7 +330,7 @@ class CalculadoraFluidos:
             fg=COR_TEXTO,
             justify="left",
             anchor="nw",
-            height=7  # altura fixa: a janela não "pula" a cada cálculo
+            height=7 
         )
 
         resultado.pack(fill="x")
@@ -446,63 +437,12 @@ class CalculadoraFluidos:
     # SEÇÃO BOMBAS
     # ==================================================
 
-    def criar_tela_em_desenvolvimento(self, titulo_janela, titulo, descricao):
-
-        janela = self.criar_janela(titulo_janela)
-
-        tk.Label(
-            janela,
-            text=titulo,
-            font=("Arial", 14, "bold"),
-            bg=COR_FUNDO,
-            fg=COR_PRINCIPAL
-        ).pack(pady=(40, 20))
-
-        tk.Label(
-            janela,
-            text=descricao,
-            font=FONTE_NORMAL,
-            bg=COR_FUNDO,
-            fg=COR_TEXTO,
-            justify="center"
-        ).pack(pady=15)
-
-        tk.Label(
-            janela,
-            text="Funcionalidades em desenvolvimento",
-            font=FONTE_NOTA,
-            bg=COR_FUNDO,
-            fg=COR_TEXTO_SUAVE
-        ).pack(pady=15)
-
-        self.criar_botao(
-            janela,
-            "VOLTAR",
-            janela.destroy,
-            COR_SECUNDARIA
-        ).pack(pady=30)
 
     def abrir_bombas(self):
 
         janela = self.criar_janela("Cálculos de Bombas")
 
-        def abrir_topico(topico):
-            self.criar_tela_em_desenvolvimento(
-                topico,
-                topico.upper(),
-            )
-
-        # Mesmo formato da tela inicial; os tópicos vêm de calculos.py
-        self.criar_menu(
-            janela,
-            "Bem-vindo ao módulo de bombas!",
-            "Escolha uma das áreas abaixo.",
-            [
-                (topico.upper(), lambda t=topico: abrir_topico(t))
-                for topico in TOPICOS_BOMBAS
-            ],
-            voltar=janela.destroy
-        )
+        
 
     # ==================================================
     # SEÇÃO SIMULAÇÃO
@@ -514,176 +454,6 @@ class CalculadoraFluidos:
 
         conteudo = tk.Frame(janela, bg=COR_FUNDO)
         conteudo.pack(fill="both", expand=True, padx=30, pady=(15, 15))
-
-        # Variáveis vindas de calculos.VARIAVEIS_SIMULACAO
-        rotulos = {
-            chave: rotulo
-            for variaveis in VARIAVEIS_SIMULACAO.values()
-            for chave, rotulo in variaveis
-        }
-
-        selecionadas = {chave: tk.BooleanVar(value=False) for chave in rotulos}
-        valores = {chave: tk.StringVar() for chave in rotulos}
-
-        def limpar_conteudo():
-
-            for widget in conteudo.winfo_children():
-                widget.destroy()
-
-        def criar_textos(titulo, apoio):
-
-            tk.Label(
-                conteudo,
-                text=titulo,
-                font=FONTE_NORMAL,
-                bg=COR_FUNDO,
-                fg=COR_PRINCIPAL
-            ).pack(anchor="w")
-
-            tk.Label(
-                conteudo,
-                text=apoio,
-                font=FONTE_NOTA,
-                bg=COR_FUNDO,
-                fg=COR_TEXTO_SUAVE
-            ).pack(anchor="w", pady=(0, 8))
-
-        # ------------------------------------------
-        # ETAPA 1: CHECKLIST
-        # ------------------------------------------
-
-        def limpar_selecao():
-
-            for variavel in selecionadas.values():
-                variavel.set(False)
-
-        def continuar():
-
-            escolhidas = [
-                chave for chave, variavel in selecionadas.items()
-                if variavel.get()
-            ]
-
-            if not escolhidas:
-
-                messagebox.showwarning(
-                    "Nenhuma variável",
-                    "Marque ao menos uma variável para continuar.",
-                    parent=janela
-                )
-
-                return
-
-            mostrar_valores(escolhidas)
-
-        def mostrar_checklist():
-
-            limpar_conteudo()
-
-            criar_textos(
-                "Quais variáveis você já possui?",
-                "Marque as caixas correspondentes e clique em continuar."
-            )
-
-            botoes = tk.Frame(conteudo, bg=COR_FUNDO)
-            botoes.pack(side="bottom", pady=(12, 0))
-
-            self.criar_botao(botoes, "CONTINUAR", continuar).pack(pady=(0, 8))
-
-            self.criar_botao(
-                botoes,
-                "LIMPAR SELEÇÃO",
-                limpar_selecao,
-                COR_SECUNDARIA
-            ).pack()
-
-            area = self.criar_area_rolavel(conteudo)
-
-            for categoria, variaveis in VARIAVEIS_SIMULACAO.items():
-
-                tk.Label(
-                    area,
-                    text=categoria.upper(),
-                    font=FONTE_CATEGORIA,
-                    bg=COR_BRANCO,
-                    fg=COR_PRINCIPAL
-                ).pack(anchor="w", padx=12, pady=(12, 2))
-
-                for chave, rotulo in variaveis:
-
-                    tk.Checkbutton(
-                        area,
-                        text=rotulo,
-                        variable=selecionadas[chave],
-                        font=FONTE_NORMAL,
-                        bg=COR_BRANCO,
-                        fg=COR_TEXTO,
-                        activebackground=COR_BRANCO,
-                        selectcolor=COR_BRANCO,
-                        anchor="w",
-                        bd=0,
-                        highlightthickness=0,
-                        cursor="hand2"
-                    ).pack(fill="x", padx=12)
-
-        # ------------------------------------------
-        # ETAPA 2: VALORES DAS VARIÁVEIS ESCOLHIDAS
-        # ------------------------------------------
-
-        def confirmar():
-
-            messagebox.showinfo(
-                "Simulação",
-                "Valores registrados.\n"
-                "A simulação será adicionada em breve.",
-                parent=janela
-            )
-
-        def mostrar_valores(escolhidas):
-
-            limpar_conteudo()
-
-            criar_textos(
-                "Informe os valores das variáveis:",
-                "Use ponto ou vírgula para decimais."
-            )
-
-            botoes = tk.Frame(conteudo, bg=COR_FUNDO)
-            botoes.pack(side="bottom", pady=(12, 0))
-
-            self.criar_botao(
-                botoes,
-                "CONFIRMAR VALORES",
-                confirmar
-            ).pack(pady=(0, 8))
-
-            self.criar_botao(
-                botoes,
-                "VOLTAR",
-                mostrar_checklist,
-                COR_SECUNDARIA
-            ).pack()
-
-            area = self.criar_area_rolavel(conteudo)
-
-            for chave in escolhidas:
-
-                tk.Label(
-                    area,
-                    text=rotulos[chave],
-                    font=FONTE_NORMAL,
-                    bg=COR_BRANCO,
-                    fg=COR_TEXTO
-                ).pack(anchor="w", padx=12, pady=(10, 2))
-
-                ttk.Entry(
-                    area,
-                    textvariable=valores[chave],
-                    font=FONTE_NORMAL
-                ).pack(fill="x", padx=12, pady=(0, 4))
-
-        mostrar_checklist()
-
 
 # ==================================================
 # INICIALIZAÇÃO DO PROGRAMA

@@ -1,9 +1,8 @@
-"""Cálculos de Mecânica dos Fluidos.
+#Cálculos de Mecânica dos Fluidos.
 
-Este arquivo concentra tudo o que é relativo a conta:
-fórmulas, constantes, operações disponíveis e listas de variáveis.
-O main.py só cuida da interface e lê os dados daqui.
-"""
+#Este arquivo concentra tudo o que é relativo a conta:
+#fórmulas, constantes, operações disponíveis e listas de variáveis.
+#O main.py só cuida da interface e lê os dados daqui.
 
 # ==================================================
 # CONSTANTES
@@ -19,7 +18,7 @@ REYNOLDS_TURBULENTO = 4000  # acima disso: escoamento turbulento
 # ==================================================
 
 def calcular_vazao(volume, tempo_min):
-    """Vazão volumétrica em m³/s.  Q = V / t"""
+#    Vazão volumétrica em m³/s.  Q = V / t
 
     if tempo_min == 0:
         raise ValueError("O tempo não pode ser zero.")
@@ -32,11 +31,11 @@ def calcular_vazao(volume, tempo_min):
 # ==================================================
 
 def calcular_velocidade(tempo_ini, tempo_fin, pos_ini, pos_fin):
-    """Velocidade média.  v = Δs / Δt
+#    Velocidade média.  v = Δs / Δt
 
-    Tempos em minutos e posições em metros.
-    Retorna (Δs em m, Δt em s, v em m/s).
-    """
+#    Tempos em minutos e posições em metros.
+#    Retorna (Δs em m, Δt em s, v em m/s).
+    
 
     espaco = pos_fin - pos_ini
     tempo = (tempo_fin - tempo_ini) * 60
@@ -52,10 +51,9 @@ def calcular_velocidade(tempo_ini, tempo_fin, pos_ini, pos_fin):
 # ==================================================
 
 def calcular_perda_carga(f, L, D, v, g=GRAVIDADE):
-    """Perda de carga pela equação de Darcy-Weisbach, em metros.
+#    Perda de carga pela equação de Darcy-Weisbach, em metros.
 
-    hf = f * (L / D) * (v² / 2g)
-    """
+#    hf = f * (L / D) * (v² / 2g)
 
     if D == 0:
         raise ValueError("O diâmetro não pode ser zero.")
@@ -68,7 +66,7 @@ def calcular_perda_carga(f, L, D, v, g=GRAVIDADE):
 # ==================================================
 
 def calcular_reynolds(densidade, velocidade, diametro, viscosidade):
-    """Número de Reynolds (adimensional).  Re = ρ * v * D / μ"""
+#    Número de Reynolds (adimensional).  Re = ρ * v * D / μ
 
     if viscosidade == 0:
         raise ValueError("A viscosidade não pode ser zero.")
@@ -81,7 +79,6 @@ def calcular_reynolds(densidade, velocidade, diametro, viscosidade):
 # ==================================================
 
 def classificar_regime(reynolds):
-    """Classifica o regime de escoamento a partir de Reynolds."""
 
     if reynolds < REYNOLDS_LAMINAR:
         return "Laminar"
@@ -194,58 +191,8 @@ OPERACOES = {
 
 
 def executar_operacao(nome, valores):
-    """Executa a operação escolhida e devolve o texto do resultado.
-
-    `valores` é um dicionário {chave do campo: número}.
-    """
+#    Executa a operação escolhida e devolve o texto do resultado.
+#    `valores` é um dicionário {chave do campo: número}.
+   
 
     return OPERACOES[nome]["resultado"](valores)
-
-
-# ==================================================
-# TÓPICOS DA SEÇÃO BOMBAS (apenas a lista, sem cálculos ainda)
-# ==================================================
-
-TOPICOS_BOMBAS = [
-    "Altura manométrica",
-    "Potência da bomba",
-    "Rendimento",
-    "NPSH",
-]
-
-
-# ==================================================
-# VARIÁVEIS DA SEÇÃO SIMULAÇÃO
-# Agrupadas por categoria: (chave, rótulo com unidade)
-# ==================================================
-
-VARIAVEIS_SIMULACAO = {
-    "Escoamento": [
-        ("vazao", "Vazão (m³/s)"),
-        ("volume", "Volume (m³)"),
-        ("tempo", "Tempo (min)"),
-        ("velocidade", "Velocidade média (m/s)"),
-        ("espaco", "Variação de espaço (m)"),
-        ("reynolds", "Número de Reynolds"),
-    ],
-    "Fluido": [
-        ("densidade", "Densidade (kg/m³)"),
-        ("viscosidade_dinamica", "Viscosidade dinâmica (Pa.s)"),
-        ("viscosidade_cinematica", "Viscosidade cinemática (m²/s)"),
-        ("peso_especifico", "Peso específico (N/m³)"),
-        ("temperatura", "Temperatura (°C)"),
-    ],
-    "Tubulação": [
-        ("diametro", "Diâmetro interno (m)"),
-        ("comprimento", "Comprimento (m)"),
-        ("area", "Área da seção (m²)"),
-        ("rugosidade", "Rugosidade (m)"),
-        ("atrito", "Fator de atrito"),
-    ],
-    "Energia e pressão": [
-        ("perda_carga", "Perda de carga (m)"),
-        ("pressao", "Pressão (Pa)"),
-        ("altura", "Altura / cota (m)"),
-        ("gravidade", "Aceleração da gravidade (m/s²)"),
-    ],
-}
