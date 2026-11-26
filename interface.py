@@ -1,164 +1,199 @@
+"""Interface gráfica. Execute este arquivo para abrir o programa.
+
+As telas só leem os campos, chamam as funções de calculos.py
+e mostram o resultado.
+"""
+
 import tkinter as tk
 from tkinter import ttk, messagebox
+
 import calculos
 
+# ==========================================
+# APARÊNCIA (altere aqui para mudar todas as telas)
+# ==========================================
+
 AZUL = "#17365D"
+AZUL_CLARO = "#24518A"
 FUNDO = "#EAF0F6"
+BRANCO = "#FFFFFF"
+TEXTO = "#222222"
+CINZA = "#D5DDE6"
 
-def mostrar_vazao(v):
-    q = calculos.calcular_vazao(v["volume"], v["tempo"])
-    return (
-        "VAZÃO DO FLUIDO\n\n"
-        f"Volume: {v['volume']} m³\n"
-        f"Tempo: {v['tempo']} min\n\n"
-        f"Vazão: {q:.6f} m³/s"
-    )
+FONTE = ("Arial", 11)
+FONTE_NEGRITO = ("Arial", 11, "bold")
+FONTE_TITULO = ("Arial", 15, "bold")
+
+AGUARDANDO = "Preencha os campos e clique em Calcular."
 
 
-def mostrar_velocidade(v):
+def configurar_estilos(root):
+    estilo = ttk.Style(root)
+    estilo.theme_use("clam")
+
+    estilo.configure("TFrame", background=FUNDO)
+    estilo.configure("Cartao.TFrame", background=BRANCO)
+    estilo.configure("TLabel", background=FUNDO, foreground=TEXTO, font=FONTE)
+    estilo.configure("Cartao.TLabel", background=BRANCO)
+    estilo.configure("Secao.Cartao.TLabel", foreground=AZUL, font=FONTE_NEGRITO)
+
+    estilo.configure("TButton", font=FONTE_NEGRITO, padding=10, borderwidth=0,
+                     background=AZUL, foreground=BRANCO)
+    estilo.map("TButton", background=[("active", AZUL_CLARO)])
+    estilo.configure("Secundario.TButton", background=CINZA, foreground=AZUL)
+    estilo.map("Secundario.TButton", background=[("active", "#C3CEDA")])
+
+    estilo.configure("TEntry", padding=5, fieldbackground=BRANCO)
+    estilo.configure("TCombobox", padding=5)
+    estilo.map("TCombobox", fieldbackground=[("readonly", BRANCO)])
+
+
+def criar_cabecalho(janela, titulo):
+    tk.Label(janela, text=titulo, font=FONTE_TITULO, bg=AZUL, fg=BRANCO,
+             pady=18).pack(fill="x")
+
+
+def configurar_janela(janela, titulo, largura=560, altura=680):
+    janela.title(titulo)
+    janela.geometry(f"{largura}x{altura}")
+    janela.minsize(largura, altura)
+    janela.configure(bg=FUNDO)
+    criar_cabecalho(janela, titulo.upper())
+
+
+def criar_cartao(pai):
+    cartao = ttk.Frame(pai, style="Cartao.TFrame", padding=16)
+    cartao.pack(fill="x", padx=24, pady=(16, 0))
+    cartao.columnconfigure(1, weight=1)
+    return cartao
+
+
+# ==========================================
+# TEXTOS DE RESULTADO
+# Cada função recebe os valores digitados (v),
+# chama o cálculo e devolve o texto.
+# ==========================================
+
+def numero(valor, casas=2):
+    """Formata com vírgula decimal: 3.5 -> '3,50'."""
+    return f"{valor:.{casas}f}".replace(".", ",")
+
+
+def formatar_vazao(v):
+    vazao = calculos.calcular_vazao(v["volume"], v["tempo"])
+    return f"Vazão: {numero(vazao, 6)} m³/s"
+
+
+def formatar_velocidade(v):
     espaco, tempo, velocidade = calculos.calcular_velocidade(
-        v["tempo_ini"], v["tempo_fin"], v["pos_ini"], v["pos_fin"]
-    )
-    return (
-        "VELOCIDADE MÉDIA\n\n"
-        f"Variação de espaço: {espaco} m\n"
-        f"Variação de tempo: {tempo} s\n\n"
-        f"Velocidade média: {velocidade:.4f} m/s"
-    )
+        v["tempo_ini"], v["tempo_fin"], v["pos_ini"], v["pos_fin"])
+    return (f"Variação de espaço: {numero(espaco)} m\n"
+            f"Variação de tempo: {numero(tempo)} s\n"
+            f"Velocidade média: {numero(velocidade, 4)} m/s")
 
 
-def mostrar_perda_carga(v):
+def formatar_perda_carga(v):
     perda = calculos.calcular_perda_carga(
-        v["atrito"], v["comprimento"], v["diametro"], v["velocidade"]
-    )
-    return (
-        "PERDA DE CARGA DISTRIBUÍDA\n\n"
-        f"Comprimento: {v['comprimento']} m\n"
-        f"Diâmetro: {v['diametro']} m\n\n"
-        f"Perda de carga: {perda:.4f} m"
-    )
+        v["atrito"], v["comprimento"], v["diametro"], v["velocidade"])
+    return f"Perda de carga: {numero(perda, 4)} m"
 
 
-def mostrar_reynolds(v):
-    re = calculos.calcular_reynolds(
-        v["densidade"], v["velocidade"], v["diametro"], v["viscosidade"]
-    )
-    return (
-        "NÚMERO DE REYNOLDS\n\n"
-        f"Reynolds: {re:.2f}\n\n"
-        f"Regime: {calculos.classificar_regime(re)}"
-    )
+def formatar_reynolds(v):
+    reynolds = calculos.calcular_reynolds(
+        v["densidade"], v["velocidade"], v["diametro"], v["viscosidade"])
+    return (f"Reynolds: {numero(reynolds)}\n"
+            f"Regime: {calculos.classificar_regime(reynolds)}")
 
 
-def mostrar_potencia_bomba(v):
-    q, watts = calculos.calcular_potencia_bomba(
-        v["vazao"], v["altura"], v["rendimento"]
-    )
-    return (
-        "POTÊNCIA DA BOMBA\n\n"
-        f"Vazão: {v['vazao']:.2f} m³/h ({q:.5f} m³/s)\n"
-        f"HMT: {v['altura']:.2f} m\n"
-        f"Rendimento: {v['rendimento']:.1f} %\n\n"
-        f"Potência: {watts:.2f} W\n"
-        f"Potência: {watts / 1000:.3f} kW\n"
-        f"Potência: {watts / 735.5:.3f} cv"
-    )
+def formatar_potencia_bomba(v):
+    vazao, watts = calculos.calcular_potencia_bomba(
+        v["vazao"], v["altura"], v["rendimento"])
+    return (f"Vazão: {numero(vazao, 5)} m³/s\n"
+            f"Potência: {numero(watts)} W\n"
+            f"Potência: {numero(watts / 1000, 3)} kW\n"
+            f"Potência: {numero(watts / calculos.WATTS_POR_CV, 3)} cv")
 
 
-def mostrar_altura_manometrica(v):
+def formatar_altura_manometrica(v):
     geometrica, perdas, hmt = calculos.calcular_altura_manometrica(
-        v["h_sucao"], v["h_recalque"], v["perda_sucao"], v["perda_recalque"]
-    )
-    return (
-        "ALTURA MANOMÉTRICA TOTAL\n\n"
-        f"Altura geométrica: {geometrica:.2f} m\n"
-        f"Perdas de carga totais: {perdas:.2f} m\n\n"
-        f"HMT: {hmt:.2f} m"
-    )
+        v["altura_sucao"], v["altura_recalque"],
+        v["perda_sucao"], v["perda_recalque"])
+    return (f"Altura geométrica: {numero(geometrica)} m\n"
+            f"Perdas de carga totais: {numero(perdas)} m\n"
+            f"HMT: {numero(hmt)} m")
 
 
-def mostrar_vazao_bomba(v):
-    q = calculos.calcular_vazao_bomba(
-        v["potencia"], v["altura"], v["rendimento"]
-    )
-    return (
-        "VAZÃO DA BOMBA\n\n"
-        f"Potência: {v['potencia']:.3f} kW\n"
-        f"HMT: {v['altura']:.2f} m\n"
-        f"Rendimento: {v['rendimento']:.1f} %\n\n"
-        f"Vazão: {q:.5f} m³/s\n"
-        f"Vazão: {q * 3600:.2f} m³/h\n"
-        f"Vazão: {q * 1000:.2f} L/s"
-    )
+def formatar_vazao_bomba(v):
+    vazao = calculos.calcular_vazao_bomba(
+        v["potencia"], v["altura"], v["rendimento"])
+    return (f"Vazão: {numero(vazao, 5)} m³/s\n"
+            f"Vazão: {numero(vazao * 3600)} m³/h\n"
+            f"Vazão: {numero(vazao * 1000)} L/s")
 
 
-def mostrar_consumo(v):
+def formatar_consumo(v):
     horas, energia, custo = calculos.calcular_consumo(
-        v["potencia"], v["horas"], v["dias"], v["tarifa"]
-    )
-    mensagem = (
-        "CONSUMO DE ENERGIA ELÉTRICA\n\n"
-        f"Potência: {v['potencia']:.3f} kW\n"
-        f"Tempo de operação: {horas:.2f} h\n\n"
-        f"Consumo: {energia:.2f} kWh"
-    )
+        v["potencia"], v["horas"], v["dias"], v["tarifa"])
+    texto = (f"Tempo de operação: {numero(horas)} h\n"
+             f"Consumo: {numero(energia)} kWh")
     if v["tarifa"] > 0:
-        mensagem += f"\nCusto estimado: R$ {custo:.2f}"
-    return mensagem
+        texto += f"\nCusto estimado: R$ {numero(custo)}"
+    return texto
+
 
 # ==========================================
 # MENUS
-# "nome da operação": (função, [(chave, texto do campo), ...])
-# Para criar uma operação nova, basta adicionar uma entrada aqui.
+# "Nome da operação": (função, [(chave, texto do campo), ...])
+# Para criar uma operação nova, adicione uma entrada aqui.
 # ==========================================
 
 OPERACOES_BASICAS = {
-    "Vazão": (mostrar_vazao, [
-        ("volume", "Volume do fluido (m³):"),
-        ("tempo", "Tempo de vazão (min):"),
+    "Vazão": (formatar_vazao, [
+        ("volume", "Volume do fluido (m³)"),
+        ("tempo", "Tempo de vazão (min)"),
     ]),
-    "Velocidade média": (mostrar_velocidade, [
-        ("tempo_ini", "Tempo inicial (min):"),
-        ("tempo_fin", "Tempo final (min):"),
-        ("pos_ini", "Posição inicial (m):"),
-        ("pos_fin", "Posição final (m):"),
+    "Velocidade média": (formatar_velocidade, [
+        ("tempo_ini", "Tempo inicial (min)"),
+        ("tempo_fin", "Tempo final (min)"),
+        ("pos_ini", "Posição inicial (m)"),
+        ("pos_fin", "Posição final (m)"),
     ]),
-    "Perda de carga distribuída": (mostrar_perda_carga, [
-        ("atrito", "Fator de atrito:"),
-        ("comprimento", "Comprimento da tubulação (m):"),
-        ("diametro", "Diâmetro interno (m):"),
-        ("velocidade", "Velocidade média (m/s):"),
+    "Perda de carga distribuída": (formatar_perda_carga, [
+        ("atrito", "Fator de atrito"),
+        ("comprimento", "Comprimento da tubulação (m)"),
+        ("diametro", "Diâmetro interno (m)"),
+        ("velocidade", "Velocidade média (m/s)"),
     ]),
-    "Número de Reynolds": (mostrar_reynolds, [
-        ("densidade", "Densidade do fluido (kg/m³):"),
-        ("velocidade", "Velocidade média (m/s):"),
-        ("diametro", "Diâmetro do tubo (m):"),
-        ("viscosidade", "Viscosidade dinâmica (Pa.s):"),
+    "Número de Reynolds": (formatar_reynolds, [
+        ("densidade", "Densidade do fluido (kg/m³)"),
+        ("velocidade", "Velocidade média (m/s)"),
+        ("diametro", "Diâmetro do tubo (m)"),
+        ("viscosidade", "Viscosidade dinâmica (Pa·s)"),
     ]),
 }
 
 OPERACOES_BOMBAS = {
-    "potência da bomba": (mostrar_potencia_bomba, [
-        ("vazao", "Vazão da bomba (m³/h):"),
-        ("altura", "Altura manométrica total - HMT (m):"),
-        ("rendimento", "Rendimento da bomba (%):"),
+    "Potência da bomba": (formatar_potencia_bomba, [
+        ("vazao", "Vazão da bomba (m³/h)"),
+        ("altura", "HMT (m)"),
+        ("rendimento", "Rendimento (%)"),
     ]),
-    "Altura manométrica total": (mostrar_altura_manometrica, [
-        ("h_sucao", "Altura de sucção (m):"),
-        ("h_recalque", "Altura de recalque (m):"),
-        ("perda_sucao", "Perda de carga na sucção (m):"),
-        ("perda_recalque", "Perda de carga no recalque (m):"),
+    "Altura manométrica total": (formatar_altura_manometrica, [
+        ("altura_sucao", "Altura de sucção (m)"),
+        ("altura_recalque", "Altura de recalque (m)"),
+        ("perda_sucao", "Perda na sucção (m) - opcional"),
+        ("perda_recalque", "Perda no recalque (m) - opcional"),
     ]),
-    "vazão da bomba": (mostrar_vazao_bomba, [
-        ("potencia", "Potência da bomba (kW):"),
-        ("altura", "Altura manométrica total - HMT (m):"),
-        ("rendimento", "Rendimento da bomba (%):"),
+    "Vazão da bomba": (formatar_vazao_bomba, [
+        ("potencia", "Potência da bomba (kW)"),
+        ("altura", "HMT (m)"),
+        ("rendimento", "Rendimento (%)"),
     ]),
-    "consumo de energia elétrica": (mostrar_consumo, [
-        ("potencia", "Potência elétrica do motor (kW):"),
-        ("horas", "Horas de funcionamento por dia (h):"),
-        ("dias", "Número de dias:"),
-        ("tarifa", "Tarifa de energia (R$/kWh) - opcional:"),
+    "Consumo de energia elétrica": (formatar_consumo, [
+        ("potencia", "Potência do motor (kW)"),
+        ("horas", "Horas por dia (h)"),
+        ("dias", "Número de dias"),
+        ("tarifa", "Tarifa (R$/kWh) - opcional"),
     ]),
 }
 
@@ -166,145 +201,115 @@ OPERACOES_BOMBAS = {
 CAMPOS_OPCIONAIS = {"perda_sucao", "perda_recalque", "tarifa"}
 
 
-def ler_numero(entrada, chave, rotulo):
-    texto = entrada.get().strip().replace(",", ".")
-    nome = rotulo.rstrip(":")
+def ler_numero(texto, chave, rotulo):
+    texto = texto.strip().replace(",", ".")
 
     if texto == "":
         if chave in CAMPOS_OPCIONAIS:
             return 0.0
-        raise ValueError(f"Preencha o campo: {nome}")
+        raise ValueError(f"Preencha o campo: {rotulo}")
 
     try:
         return float(texto)
     except ValueError:
-        raise ValueError(f"Valor inválido no campo: {nome}")
+        raise ValueError(f"Valor inválido no campo: {rotulo}")
 
 
 # ==========================================
-# JANELA DE CALCULADORA (usada por todos os menus)
+# JANELAS
 # ==========================================
 
-def abrir_calculadora(root, titulo_janela, titulo, texto_menu, operacoes):
+def abrir_calculadora(root, titulo, operacoes):
     janela = tk.Toplevel(root)
-    janela.title(titulo_janela)
-    janela.geometry("550x620")
-    janela.minsize(550, 620)
-    janela.configure(bg=FUNDO)
+    configurar_janela(janela, titulo)
 
-    tk.Label(janela, text=titulo, font=("Arial", 15, "bold"),
-             bg=FUNDO, fg=AZUL).pack(pady=20)
-
-    frame_menu = tk.Frame(janela, bg=FUNDO)
-    frame_menu.pack(pady=10)
-
-    tk.Label(frame_menu, text=texto_menu, font=("Arial", 11, "bold"),
-             bg=FUNDO).pack()
-
-    selecao = ttk.Combobox(frame_menu, values=list(operacoes),
-                           state="readonly", width=35, font=("Arial", 11))
-    selecao.pack(pady=10)
+    cartao_menu = criar_cartao(janela)
+    ttk.Label(cartao_menu, text="Operação",
+              style="Secao.Cartao.TLabel").grid(row=0, column=0, sticky="w")
+    selecao = ttk.Combobox(cartao_menu, values=list(operacoes),
+                           state="readonly", font=FONTE)
+    selecao.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(6, 0))
     selecao.current(0)
 
-    frame_campos = tk.Frame(janela, bg=FUNDO)
-    frame_campos.pack(pady=10)
+    cartao_campos = criar_cartao(janela)
 
-    frame_resultado = tk.LabelFrame(
-        janela, text="Resultado da operação", font=("Arial", 11, "bold"),
-        bg="white", fg=AZUL, padx=15, pady=15
-    )
-    frame_resultado.pack(fill="both", padx=30, pady=10)
+    barra = ttk.Frame(janela)
+    barra.pack(fill="x", padx=24, pady=(16, 0))
+    barra.columnconfigure((0, 1), weight=1, uniform="botoes")
 
-    resultado = tk.Label(frame_resultado, font=("Arial", 11), bg="white",
-                         fg="#222222", justify="left")
-    resultado.pack(anchor="w")
+    cartao_resultado = criar_cartao(janela)
+    ttk.Label(cartao_resultado, text="Resultado",
+              style="Secao.Cartao.TLabel").pack(anchor="w")
+    resultado = ttk.Label(cartao_resultado, style="Cartao.TLabel",
+                          justify="left")
+    resultado.pack(anchor="w", pady=(8, 0))
 
     campos = {}   # chave -> (caixa de texto, rótulo)
 
     def mostrar_campos(event=None):
-        for widget in frame_campos.winfo_children():
+        for widget in cartao_campos.winfo_children():
             widget.destroy()
         campos.clear()
-        resultado.config(text="Aguardando cálculo...")
+        resultado.config(text=AGUARDANDO)
 
         _, lista_campos = operacoes[selecao.get()]
-        for chave, rotulo in lista_campos:
-            tk.Label(frame_campos, text=rotulo, font=("Arial", 10),
-                     bg=FUNDO).pack(anchor="w", pady=(8, 2))
-            entrada = ttk.Entry(frame_campos, width=40, font=("Arial", 11))
-            entrada.pack(pady=2)
+        for linha, (chave, rotulo) in enumerate(lista_campos):
+            ttk.Label(cartao_campos, text=rotulo, style="Cartao.TLabel").grid(
+                row=linha, column=0, sticky="w", padx=(0, 12), pady=5)
+            entrada = ttk.Entry(cartao_campos, font=FONTE)
+            entrada.grid(row=linha, column=1, sticky="ew", pady=5)
             campos[chave] = (entrada, rotulo)
 
-    def calcular():
+        next(iter(campos.values()))[0].focus_set()
+
+    def calcular(event=None):
         funcao, _ = operacoes[selecao.get()]
         try:
             valores = {
-                chave: ler_numero(entrada, chave, rotulo)
+                chave: ler_numero(entrada.get(), chave, rotulo)
                 for chave, (entrada, rotulo) in campos.items()
             }
             resultado.config(text=funcao(valores))
         except ValueError as erro:
+            resultado.config(text=AGUARDANDO)
             messagebox.showerror("Erro de entrada", str(erro), parent=janela)
 
     def limpar():
         for entrada, _ in campos.values():
             entrada.delete(0, tk.END)
-        resultado.config(text="Aguardando cálculo...")
+        resultado.config(text=AGUARDANDO)
 
-    tk.Button(janela, text="CALCULAR", font=("Arial", 12, "bold"),
-              bg=AZUL, fg="white", width=20, command=calcular).pack(pady=15)
-
-    tk.Button(janela, text="LIMPAR CAMPOS", font=("Arial", 10),
-              bg="#AAB7C4", width=20, command=limpar).pack(pady=5)
+    ttk.Button(barra, text="Calcular", command=calcular).grid(
+        row=0, column=0, sticky="ew", padx=(0, 6))
+    ttk.Button(barra, text="Limpar campos", style="Secundario.TButton",
+               command=limpar).grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
     selecao.bind("<<ComboboxSelected>>", mostrar_campos)
+    janela.bind("<Return>", calcular)
     mostrar_campos()
 
 
-# ==========================================
-# TELA INICIAL
-# ==========================================
+def abrir_simulacao(root):
+    janela = tk.Toplevel(root)
+    configurar_janela(janela, "Simulação")
+
 
 def criar_tela_inicial():
     root = tk.Tk()
-    root.title("Mecânica dos Fluidos")
-    root.geometry("550x620")
-    root.minsize(550, 620)
-    root.configure(bg="#FAFCFF")
+    configurar_estilos(root)
+    configurar_janela(root, "Mecânica dos Fluidos", altura=420)
 
-    def abrir_basicos():
-        abrir_calculadora(
-            root,
-            "Calculadora de Mecânica dos Fluidos",
-            "CALCULADORA DE MECÂNICA DOS FLUIDOS",
-            "Selecione a operação:",
-            OPERACOES_BASICAS,
-        )
+    ttk.Label(root, text="Escolha uma opção:").pack(pady=(36, 12))
 
-    def abrir_bombas():
-        abrir_calculadora(
-            root,
-            "Calculadora de bombas",
-            "CALCULADORA DE BOMBAS",
-            "Selecione o tipo de bomba:",
-            OPERACOES_BOMBAS,
-        )
-
-    tk.Label(root, text="CALCULADORA DE MECÂNICA DOS FLUIDOS",
-             font=("Arial", 15, "bold"), bg=FUNDO, fg=AZUL).pack(pady=30)
-
-    tk.Label(root, text="Bem-vindo ao sistema!", font=("Arial", 13),
-             bg=FUNDO).pack(pady=15)
-
-    # "Simulaçao" abre a mesma tela de "basicos" (ainda não há simulação)
     botoes = [
-        ("basicos", abrir_basicos, 30),
-        ("bombas", abrir_bombas, 45),
-        ("Simulaçao", abrir_basicos, 50),
+        ("Básicos", lambda: abrir_calculadora(
+            root, "Cálculos básicos", OPERACOES_BASICAS)),
+        ("Bombas", lambda: abrir_calculadora(
+            root, "Bombas", OPERACOES_BOMBAS)),
+        ("Simulação", lambda: abrir_simulacao(root)),
     ]
-    for texto, comando, espaco in botoes:
-        tk.Button(root, text=texto, font=("Arial", 12, "bold"), bg=AZUL,
-                  fg="white", width=20, command=comando).pack(pady=espaco)
+    for texto, comando in botoes:
+        ttk.Button(root, text=texto, width=24, command=comando).pack(pady=8)
 
     return root
 
