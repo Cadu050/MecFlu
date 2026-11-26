@@ -1,15 +1,3 @@
-"""
-Motor da Simulação.
-
-O usuário informa as variáveis que possui; este módulo aplica as fórmulas do
-calculos.py (e suas inversas) repetidamente até não conseguir calcular mais
-nada. Se o usuário pediu uma variável específica e ela não saiu, o resultado
-diz exatamente o que faltou informar.
-
-Para adicionar uma variável nova:  coloque-a em GRUPOS.
-Para adicionar uma fórmula nova:   crie as regras com _regra() mais abaixo.
-"""
-
 import math
 from collections import namedtuple
 
@@ -18,12 +6,6 @@ from calculos import G, RHO_AGUA
 
 _pos = calculos._exigir_positivo
 _nao_neg = calculos._exigir_nao_negativo
-
-
-# ==========================================
-# VARIÁVEIS (aparecem na check list)
-# grupo -> [(chave, texto com unidade), ...]
-# ==========================================
 
 GRUPOS = {
     "Vazão e velocidade": [
@@ -68,14 +50,7 @@ GRUPOS = {
 ROTULOS = {chave: rotulo
            for variaveis in GRUPOS.values() for chave, rotulo in variaveis}
 
-# Como na tela de Bombas: se não forem informadas, valem 0 (só quando precisar)
 OPCIONAIS_ZERO = ("perda_sucao", "perda_recalque")
-
-
-# ==========================================
-# REGRAS: cada fórmula, em todas as direções
-# Regra = (equação, variável calculada, variáveis necessárias, função)
-# ==========================================
 
 Regra = namedtuple("Regra", "equacao saida entradas funcao")
 REGRAS = []

@@ -5,23 +5,27 @@ import calculos
 import simulacao
 
 # ==========================================
-# APARÊNCIA (altere aqui para mudar todas as telas)
+# APARÊNCIA (personalize todas as telas por aqui)
 # ==========================================
 
-AZUL = "#17365D"
-AZUL_CLARO = "#24518A"
-FUNDO = "#F0F4F8"
+AZUL = "#142D4E"
+AZUL_CLARO = "#1A344D"
+AZUL_DESTAQUE = "#224668"
+FUNDO = "#F3F6FA"
 BRANCO = "#FFFFFF"
-TEXTO = "#222222"
-CINZA = "#D5DDE6"
+TEXTO = "#243247"
+TEXTO_SUAVE = "#65758B"
+CINZA = "#E8EEF5"
+BORDA = "#DCE5EF"
 
-FONTE = ("Segoe UI", 12)
-FONTE_NEGRITO = ("Segoe UI", 12, "bold")
-FONTE_TITULO = ("Segoe UI", 14, "bold")
+FONTE = ("Segoe UI", 11)
+FONTE_NEGRITO = ("Segoe UI", 11, "bold")
+FONTE_TITULO = ("Segoe UI", 17, "bold")
+FONTE_SUBTITULO = ("Segoe UI", 10)
 
 AGUARDANDO = "Preencha os campos e clique em Calcular."
 AGUARDANDO_SIMULACAO = ("Marque as variáveis que você possui, preencha os valores "
-                        "e clique em Calcular.")
+                         "e clique em Calcular.")
 TUDO = "Tudo o que for possível calcular"
 
 
@@ -30,28 +34,73 @@ def configurar_estilos(root):
     estilo.theme_use("clam")
 
     estilo.configure("TFrame", background=FUNDO)
-    estilo.configure("Cartao.TFrame", background=BRANCO)
+    estilo.configure("Cartao.TFrame", background=BRANCO, relief="flat")
     estilo.configure("TLabel", background=FUNDO, foreground=TEXTO, font=FONTE)
-    estilo.configure("Cartao.TLabel", background=BRANCO)
+    estilo.configure("Cartao.TLabel", background=BRANCO, foreground=TEXTO)
     estilo.configure("Secao.Cartao.TLabel", foreground=AZUL, font=FONTE_NEGRITO)
+    estilo.configure("Ajuda.TLabel", foreground=TEXTO_SUAVE, font=FONTE_SUBTITULO)
 
-    estilo.configure("TButton", font=FONTE_NEGRITO, padding=12, borderwidth=0,
-                     background=AZUL, foreground=BRANCO)
-    estilo.map("TButton", background=[("active", AZUL_CLARO)])
-    estilo.configure("Secundario.TButton", background=CINZA, foreground=AZUL)
-    estilo.map("Secundario.TButton", background=[("active", "#C3CEDA")])
+    estilo.configure(
+        "TButton", font=FONTE_NEGRITO, padding=(16, 11),
+        borderwidth=0, background=AZUL_DESTAQUE, foreground=BRANCO,
+        focuscolor=AZUL_DESTAQUE
+    )
+    estilo.map(
+        "TButton",
+        background=[("active", AZUL_CLARO), ("pressed", AZUL)],
+        foreground=[("disabled", "#B8C4D1")]
+    )
+    estilo.configure(
+        "Secundario.TButton", background=CINZA, foreground=AZUL,
+        font=FONTE_NEGRITO
+    )
+    estilo.map(
+        "Secundario.TButton",
+        background=[("active", "#D9E3EE"), ("pressed", "#CCD8E5")],
+        foreground=[("active", AZUL)]
+    )
 
-    estilo.configure("Cartao.TCheckbutton", background=BRANCO, font=FONTE)
-    estilo.map("Cartao.TCheckbutton", background=[("active", BRANCO)])
+    estilo.configure(
+        "Cartao.TCheckbutton", background=BRANCO, foreground=TEXTO,
+        font=FONTE, padding=(3, 5)
+    )
+    estilo.map(
+        "Cartao.TCheckbutton",
+        background=[("active", BRANCO)],
+        foreground=[("active", AZUL)]
+    )
 
-    estilo.configure("TEntry", padding=5, fieldbackground=BRANCO)
-    estilo.configure("TCombobox", padding=5)
-    estilo.map("TCombobox", fieldbackground=[("readonly", BRANCO)])
+    estilo.configure(
+        "TEntry", padding=(9, 8), fieldbackground=BRANCO,
+        foreground=TEXTO, bordercolor=BORDA, lightcolor=BORDA,
+        darkcolor=BORDA, insertcolor=AZUL
+    )
+    estilo.map(
+        "TEntry",
+        bordercolor=[("focus", AZUL_DESTAQUE)],
+        lightcolor=[("focus", AZUL_DESTAQUE)],
+        darkcolor=[("focus", AZUL_DESTAQUE)]
+    )
+    estilo.configure(
+        "TCombobox", padding=(9, 8), fieldbackground=BRANCO,
+        foreground=TEXTO, bordercolor=BORDA, arrowcolor=AZUL
+    )
+    estilo.map(
+        "TCombobox",
+        fieldbackground=[("readonly", BRANCO), ("focus", BRANCO)],
+        selectbackground=[("readonly", BRANCO)],
+        selectforeground=[("readonly", TEXTO)],
+        bordercolor=[("focus", AZUL_DESTAQUE)]
+    )
 
 
 def criar_cabecalho(janela, titulo):
-    tk.Label(janela, text=titulo, font=FONTE_TITULO, bg=AZUL, fg=BRANCO,
-             pady=18).pack(fill="x")
+    cabecalho = tk.Frame(janela, bg=AZUL, padx=26, pady=19)
+    cabecalho.pack(fill="x")
+    tk.Label(
+        cabecalho, text=titulo, font=FONTE_TITULO,
+        bg=AZUL, fg=BRANCO, anchor="w"
+    ).pack(fill="x")
 
 
 def configurar_janela(janela, titulo, largura=560, altura=680):
@@ -59,12 +108,12 @@ def configurar_janela(janela, titulo, largura=560, altura=680):
     janela.geometry(f"{largura}x{altura}")
     janela.minsize(largura, altura)
     janela.configure(bg=FUNDO)
-    criar_cabecalho(janela, titulo.upper())
+    criar_cabecalho(janela, titulo)
 
 
 def criar_cartao(pai):
-    cartao = ttk.Frame(pai, style="Cartao.TFrame", padding=16)
-    cartao.pack(fill="x", padx=24, pady=(16, 0))
+    cartao = ttk.Frame(pai, style="Cartao.TFrame", padding=(20, 17))
+    cartao.pack(fill="x", padx=26, pady=(17, 0))
     cartao.columnconfigure(1, weight=1)
     return cartao
 
@@ -241,7 +290,7 @@ def abrir_calculadora(root, titulo, operacoes):
     cartao_campos = criar_cartao(janela)
 
     barra = ttk.Frame(janela)
-    barra.pack(fill="x", padx=24, pady=(16, 0))
+    barra.pack(fill="x", padx=26, pady=(17, 0))
     barra.columnconfigure((0, 1), weight=1, uniform="botoes")
 
     cartao_resultado = criar_cartao(janela)
@@ -390,7 +439,7 @@ def abrir_simulacao(root):
 
     # --- Resultado e botões (fixos embaixo) ---
     cartao_resultado = ttk.Frame(janela, style="Cartao.TFrame", padding=16)
-    cartao_resultado.pack(side="bottom", fill="x", padx=24, pady=(16, 16))
+    cartao_resultado.pack(side="bottom", fill="x", padx=26, pady=(17, 18))
     ttk.Label(cartao_resultado, text="Resultado",
               style="Secao.Cartao.TLabel").pack(anchor="w")
     caixa = tk.Text(cartao_resultado, height=8, wrap="word", font=FONTE,
@@ -408,21 +457,21 @@ def abrir_simulacao(root):
         caixa.config(state="disabled")
 
     barra = ttk.Frame(janela)
-    barra.pack(side="bottom", fill="x", padx=24, pady=(16, 0))
+    barra.pack(side="bottom", fill="x", padx=26, pady=(17, 0))
     barra.columnconfigure((0, 1), weight=1, uniform="botoes")
 
     ttk.Button(barra, text="Copiar resultado", style="Secundario.TButton", command=lambda: (janela.clipboard_clear(), janela.clipboard_append(caixa.get("1.0", "end-1c")))).grid(row=0, column=2, padx=(8, 0))
     ttk.Label(janela, text="Marque apenas dados conhecidos. Para água, informe densidade 1000 kg/m³.\nPerdas desconhecidas ficam em branco; marque zero apenas se desprezíveis.", justify="left", wraplength=650).pack(fill="x", padx=24, pady=(8, 0))
     # --- Check list rolável ---
     area_lista = ttk.Frame(janela)
-    area_lista.pack(fill="both", expand=True, padx=24, pady=(16, 0))
+    area_lista.pack(fill="both", expand=True, padx=26, pady=(17, 0))
     tela = tk.Canvas(area_lista, bg=BRANCO, highlightthickness=0)
     rolagem = ttk.Scrollbar(area_lista, orient="vertical", command=tela.yview)
     tela.configure(yscrollcommand=rolagem.set)
     rolagem.pack(side="right", fill="y")
     tela.pack(side="left", fill="both", expand=True)
 
-    lista = ttk.Frame(tela, style="Cartao.TFrame", padding=16)
+    lista = ttk.Frame(tela, style="Cartao.TFrame", padding=(20, 18))
     lista.columnconfigure(0, weight=1)
     id_lista = tela.create_window((0, 0), window=lista, anchor="nw")
     lista.bind("<Configure>",
@@ -512,7 +561,7 @@ def criar_tela_inicial():
     configurar_estilos(root)
     configurar_janela(root, "Mecânica dos Fluidos", altura=440)
 
-    ttk.Label(root, text="Simule seu sistema ou faça cálculos individuais.").pack(pady=(36, 12))
+    ttk.Label(root, text="Simule seu sistema ou faça cálculos individuais.\n", font=FONTE, foreground=TEXTO_SUAVE).pack(pady=(34, 18))
 
     botoes = [
         ("Simulação", lambda: abrir_simulacao(root)),
@@ -522,7 +571,7 @@ def criar_tela_inicial():
             root, "Bombas", OPERACOES_BOMBAS)),
     ]
     for texto, comando in botoes:
-        ttk.Button(root, text=texto, width=24, command=comando).pack(pady=8)
+        ttk.Button(root, text=texto, width=27, command=comando).pack(pady=9, ipady=2)
 
     return root
 
