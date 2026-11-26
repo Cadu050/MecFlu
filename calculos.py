@@ -1,3 +1,5 @@
+import math
+
 G = 9.81          
 RHO_AGUA = 1000   
 WATTS_POR_CV = 735.5
@@ -9,13 +11,13 @@ WATTS_POR_CV = 735.5
 
 def _exigir_positivo(**valores):
     for nome, valor in valores.items():
-        if valor <= 0:
+        if not math.isfinite(valor) or valor <= 0:
             raise ValueError(f"{nome.replace('_', ' ')}: use um valor maior que zero.")
 
 
 def _exigir_nao_negativo(**valores):
     for nome, valor in valores.items():
-        if valor < 0:
+        if not math.isfinite(valor) or valor < 0:
             raise ValueError(f"{nome.replace('_', ' ')}: não pode ser negativo.")
 
 
@@ -72,18 +74,19 @@ def classificar_regime(reynolds):
 # BOMBAS
 # ==========================================
 
-def calcular_potencia_bomba(vazao_m3h, altura, rendimento):
+def calcular_potencia_bomba(vazao_m3h, altura, rendimento, densidade=RHO_AGUA):
     """P = ρ * g * Q * H / η. Retorna (vazão em m³/s, potência em W)."""
     _exigir_positivo(Vazão=vazao_m3h, HMT=altura)
+    _exigir_positivo(Densidade=densidade)
     eta = _rendimento_decimal(rendimento)
     vazao = vazao_m3h / 3600
-    return vazao, RHO_AGUA * G * vazao * altura / eta
+    return vazao, densidade * G * vazao * altura / eta
 
 
 def calcular_altura_manometrica(altura_sucao, altura_recalque,
                                 perda_sucao=0.0, perda_recalque=0.0):
     """Retorna (altura geométrica, perdas totais, HMT), tudo em m."""
-    _exigir_positivo(Altura_de_recalque=altura_recalque)
+    _exigir_nao_negativo(Altura_de_recalque=altura_recalque)
     _exigir_nao_negativo(Perda_na_sucção=perda_sucao,
                          Perda_no_recalque=perda_recalque)
     geometrica = altura_sucao + altura_recalque
@@ -91,11 +94,12 @@ def calcular_altura_manometrica(altura_sucao, altura_recalque,
     return geometrica, perdas, geometrica + perdas
 
 
-def calcular_vazao_bomba(potencia_kw, altura, rendimento):
+def calcular_vazao_bomba(potencia_kw, altura, rendimento, densidade=RHO_AGUA):
     """Q = P * η / (ρ * g * H). Retorna a vazão em m³/s."""
     _exigir_positivo(Potência=potencia_kw, HMT=altura)
+    _exigir_positivo(Densidade=densidade)
     eta = _rendimento_decimal(rendimento)
-    return potencia_kw * 1000 * eta / (RHO_AGUA * G * altura)
+    return potencia_kw * 1000 * eta / (densidade * G * altura)
 
 
 def calcular_consumo(potencia_kw, horas_dia, dias, tarifa=0.0):
@@ -108,3 +112,12 @@ def calcular_consumo(potencia_kw, horas_dia, dias, tarifa=0.0):
     horas = horas_dia * dias
     energia = potencia_kw * horas
     return horas, energia, energia * tarifa
+
+def calcular_area(diametro):
+    _exigir_positivo(Diâmetro=diametro)
+    return math.pi * diametro**2 / 4
+
+
+def calcular_vazao_tubo(diametro, velocidade):
+    _exigir_nao_negativo(Velocidade=velocidade)
+    return calcular_area(diametro) * velocidade * 3600

@@ -1,3 +1,4 @@
+import math
 import tkinter as tk
 from tkinter import ttk, messagebox
 import calculos
@@ -9,14 +10,14 @@ import simulacao
 
 AZUL = "#17365D"
 AZUL_CLARO = "#24518A"
-FUNDO = "#EAF0F6"
+FUNDO = "#F0F4F8"
 BRANCO = "#FFFFFF"
 TEXTO = "#222222"
 CINZA = "#D5DDE6"
 
-FONTE = ("Arial", 12)
-FONTE_NEGRITO = ("Arial", 12, "bold")
-FONTE_TITULO = ("Arial", 14, "bold")
+FONTE = ("Segoe UI", 12)
+FONTE_NEGRITO = ("Segoe UI", 12, "bold")
+FONTE_TITULO = ("Segoe UI", 14, "bold")
 
 AGUARDANDO = "Preencha os campos e clique em Calcular."
 AGUARDANDO_SIMULACAO = ("Marque as variáveis que você possui, preencha os valores "
@@ -34,7 +35,7 @@ def configurar_estilos(root):
     estilo.configure("Cartao.TLabel", background=BRANCO)
     estilo.configure("Secao.Cartao.TLabel", foreground=AZUL, font=FONTE_NEGRITO)
 
-    estilo.configure("TButton", font=FONTE_NEGRITO, padding=10, borderwidth=0,
+    estilo.configure("TButton", font=FONTE_NEGRITO, padding=12, borderwidth=0,
                      background=AZUL, foreground=BRANCO)
     estilo.map("TButton", background=[("active", AZUL_CLARO)])
     estilo.configure("Secundario.TButton", background=CINZA, foreground=AZUL)
@@ -107,7 +108,7 @@ def formatar_reynolds(v):
 
 def formatar_potencia_bomba(v):
     vazao, watts = calculos.calcular_potencia_bomba(
-        v["vazao"], v["altura"], v["rendimento"])
+        v["vazao"], v["altura"], v["rendimento"], v["densidade"])
     return (f"Vazão: {numero(vazao, 5)} m³/s\n"
             f"Potência: {numero(watts)} W\n"
             f"Potência: {numero(watts / 1000, 3)} kW\n"
@@ -125,7 +126,7 @@ def formatar_altura_manometrica(v):
 
 def formatar_vazao_bomba(v):
     vazao = calculos.calcular_vazao_bomba(
-        v["potencia"], v["altura"], v["rendimento"])
+        v["potencia"], v["altura"], v["rendimento"], v["densidade"])
     return (f"Vazão: {numero(vazao, 5)} m³/s\n"
             f"Vazão: {numero(vazao * 3600)} m³/h\n"
             f"Vazão: {numero(vazao * 1000)} L/s")
@@ -148,6 +149,7 @@ def formatar_consumo(v):
 # ==========================================
 
 OPERACOES_BASICAS = {
+    "Vazão pela tubulação": (lambda v: f"Vazão: {numero_auto(calculos.calcular_vazao_tubo(v['diametro'], v['velocidade']))} m³/h", [("diametro", "Diâmetro interno (m)"), ("velocidade", "Velocidade (m/s)")]),
     "Vazão": (formatar_vazao, [
         ("volume", "Volume do fluido (m³)"),
         ("tempo", "Tempo de vazão (min)"),
@@ -177,6 +179,7 @@ OPERACOES_BOMBAS = {
         ("vazao", "Vazão da bomba (m³/h)"),
         ("altura", "HMT (m)"),
         ("rendimento", "Rendimento (%)"),
+        ("densidade", "Densidade (kg/m³)"),
     ]),
     "Altura manométrica total": (formatar_altura_manometrica, [
         ("altura_sucao", "Altura de sucção (m)"),
@@ -188,6 +191,7 @@ OPERACOES_BOMBAS = {
         ("potencia", "Potência da bomba (kW)"),
         ("altura", "HMT (m)"),
         ("rendimento", "Rendimento (%)"),
+        ("densidade", "Densidade (kg/m³)"),
     ]),
     "Consumo de energia elétrica": (formatar_consumo, [
         ("potencia", "Potência do motor (kW)"),
@@ -210,7 +214,10 @@ def ler_numero(texto, chave, rotulo):
         raise ValueError(f"Preencha o campo: {rotulo}")
 
     try:
-        return float(texto)
+        valor = float(texto)
+        if not math.isfinite(valor):
+            raise ValueError()
+        return valor
     except ValueError:
         raise ValueError(f"Valor inválido no campo: {rotulo}")
 
@@ -258,6 +265,8 @@ def abrir_calculadora(root, titulo, operacoes):
                 row=linha, column=0, sticky="w", padx=(0, 12), pady=5)
             entrada = ttk.Entry(cartao_campos, font=FONTE)
             entrada.grid(row=linha, column=1, sticky="ew", pady=5)
+            if chave == "densidade" and operacoes is OPERACOES_BOMBAS:
+                entrada.insert(0, "1000")
             campos[chave] = (entrada, rotulo)
 
         next(iter(campos.values()))[0].focus_set()
@@ -359,12 +368,16 @@ def formatar_simulacao(res):
         texto.append("\nAtenção - conta não resolvida por valor inválido:")
         texto += [f"• {erro}" for erro in res["erros"]]
 
+    if res.get("conflitos"):
+        texto.insert(0, "ATENÇÃO: dados contraditórios. Resultados provisórios.\n" + "\n".join(res["conflitos"]) + "\n")
+    texto.append("\nValores informados:")
+    texto.extend(f"• {rotulos[c]} = {numero_auto(v)}" for c, v in valores.items() if c not in calculadas)
     return "\n".join(texto)
 
 
 def abrir_simulacao(root):
     janela = tk.Toplevel(root)
-    configurar_janela(janela, "Simulação", largura=720, altura=720)
+    configurar_janela(janela, "Simulação", largura=800, altura=740)
 
     # --- O que o usuário quer calcular ---
     cartao_alvo = criar_cartao(janela)
@@ -398,6 +411,8 @@ def abrir_simulacao(root):
     barra.pack(side="bottom", fill="x", padx=24, pady=(16, 0))
     barra.columnconfigure((0, 1), weight=1, uniform="botoes")
 
+    ttk.Button(barra, text="Copiar resultado", style="Secundario.TButton", command=lambda: (janela.clipboard_clear(), janela.clipboard_append(caixa.get("1.0", "end-1c")))).grid(row=0, column=2, padx=(8, 0))
+    ttk.Label(janela, text="Marque apenas dados conhecidos. Para água, informe densidade 1000 kg/m³.\nPerdas desconhecidas ficam em branco; marque zero apenas se desprezíveis.", justify="left", wraplength=650).pack(fill="x", padx=24, pady=(8, 0))
     # --- Check list rolável ---
     area_lista = ttk.Frame(janela)
     area_lista.pack(fill="both", expand=True, padx=24, pady=(16, 0))
@@ -470,7 +485,11 @@ def abrir_simulacao(root):
 
         escolhido = alvo.get()
         chave_alvo = None if escolhido == TUDO else rotulo_para_chave[escolhido]
-        mostrar(formatar_simulacao(simulacao.resolver(informadas, chave_alvo)))
+        try:
+            mostrar(formatar_simulacao(simulacao.resolver(informadas, chave_alvo)))
+        except ValueError as erro:
+            mostrar(str(erro))
+            messagebox.showerror("Dados inválidos", str(erro), parent=janela)
 
     def limpar():
         for chave, (marcada, _, _) in linhas.items():
@@ -491,16 +510,16 @@ def abrir_simulacao(root):
 def criar_tela_inicial():
     root = tk.Tk()
     configurar_estilos(root)
-    configurar_janela(root, "Mecânica dos Fluidos", altura=420)
+    configurar_janela(root, "Mecânica dos Fluidos", altura=440)
 
-    ttk.Label(root, text="Escolha uma opção:").pack(pady=(36, 12))
+    ttk.Label(root, text="Simule seu sistema ou faça cálculos individuais.").pack(pady=(36, 12))
 
     botoes = [
+        ("Simulação", lambda: abrir_simulacao(root)),
         ("Básicos", lambda: abrir_calculadora(
             root, "Cálculos básicos", OPERACOES_BASICAS)),
         ("Bombas", lambda: abrir_calculadora(
             root, "Bombas", OPERACOES_BOMBAS)),
-        ("Simulação", lambda: abrir_simulacao(root)),
     ]
     for texto, comando in botoes:
         ttk.Button(root, text=texto, width=24, command=comando).pack(pady=8)

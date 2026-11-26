@@ -40,6 +40,7 @@ GRUPOS = {
         ("atrito", "Fator de atrito"),
         ("comprimento", "Comprimento da tubulação (m)"),
         ("diametro", "Diâmetro interno (m)"),
+        ("area", "Área interna (m²)"),
         ("perda_carga", "Perda de carga distribuída (m)"),
         ("densidade", "Densidade do fluido (kg/m³)"),
         ("viscosidade", "Viscosidade dinâmica (Pa·s)"),
@@ -48,8 +49,8 @@ GRUPOS = {
     "Bomba": [
         ("altura_sucao", "Altura de sucção (m)"),
         ("altura_recalque", "Altura de recalque (m)"),
-        ("perda_sucao", "Perda na sucção (m) - opcional"),
-        ("perda_recalque", "Perda no recalque (m) - opcional"),
+        ("perda_sucao", "Perda na sucção (m)"),
+        ("perda_recalque", "Perda no recalque (m)"),
         ("hmt", "HMT - altura manométrica total (m)"),
         ("rendimento", "Rendimento (%)"),
         ("potencia", "Potência da bomba/motor (kW)"),
@@ -226,12 +227,12 @@ EQ = "Potência da bomba (P = ρ·g·Q·H / η)"
 def _hmt_bomba(k):
     _pos(Potência=k["potencia"], Vazão=k["vazao"])
     eta = calculos._rendimento_decimal(k["rendimento"])
-    return k["potencia"] * 1000 * eta / (RHO_AGUA * G * k["vazao"] / 3600)
+    return k["potencia"] * 1000 * eta / (k["densidade"] * G * k["vazao"] / 3600)
 
 
 def _rendimento(k):
     _pos(Potência=k["potencia"], Vazão=k["vazao"], HMT=k["hmt"])
-    valor = (RHO_AGUA * G * (k["vazao"] / 3600) * k["hmt"]
+    valor = (k["densidade"] * G * (k["vazao"] / 3600) * k["hmt"]
              / (k["potencia"] * 1000) * 100)
     if valor > 100:
         raise ValueError("Rendimento: o valor calculado passa de 100%. "
@@ -239,14 +240,14 @@ def _rendimento(k):
     return valor
 
 
-_regra(EQ, "potencia", ["vazao", "hmt", "rendimento"],
+_regra(EQ, "potencia", ["vazao", "hmt", "rendimento", "densidade"],
        lambda k: calculos.calcular_potencia_bomba(
-           k["vazao"], k["hmt"], k["rendimento"])[1] / 1000)
-_regra(EQ, "vazao", ["potencia", "hmt", "rendimento"],
+           k["vazao"], k["hmt"], k["rendimento"], k["densidade"])[1] / 1000)
+_regra(EQ, "vazao", ["potencia", "hmt", "rendimento", "densidade"],
        lambda k: calculos.calcular_vazao_bomba(
-           k["potencia"], k["hmt"], k["rendimento"]) * 3600)
-_regra(EQ, "hmt", ["potencia", "vazao", "rendimento"], _hmt_bomba)
-_regra(EQ, "rendimento", ["potencia", "vazao", "hmt"], _rendimento)
+           k["potencia"], k["hmt"], k["rendimento"], k["densidade"]) * 3600)
+_regra(EQ, "hmt", ["potencia", "vazao", "rendimento", "densidade"], _hmt_bomba)
+_regra(EQ, "rendimento", ["potencia", "vazao", "hmt", "densidade"], _rendimento)
 
 
 # ---------- Altura manométrica: HMT = alturas + perdas ----------
@@ -261,7 +262,7 @@ def _resto(k, ignorar):
 
 def _altura_recalque(k):
     valor = _resto(k, "altura_recalque")
-    _pos(Altura_de_recalque=valor)
+    _nao_neg(Altura_de_recalque=valor)
     return valor
 
 
@@ -373,6 +374,14 @@ _regra(EQ, "energia", ["custo", "tarifa"], _energia_custo)
 _regra(EQ, "tarifa", ["custo", "energia"], _tarifa)
 
 
+# Continuidade em uma tubulação circular cheia.
+_regra("Área circular", "area", ["diametro"], lambda k: calculos.calcular_area(k["diametro"]))
+_regra("Área circular", "diametro", ["area"], lambda k: math.sqrt(4*k["area"]/math.pi))
+_regra("Continuidade (Q = A × v)", "vazao", ["area", "velocidade"], lambda k: k["area"]*k["velocidade"]*3600)
+_regra("Continuidade (Q = A × v)", "velocidade", ["area", "vazao"], lambda k: k["vazao"]/3600/k["area"])
+_regra("Continuidade (Q = A × v)", "area", ["vazao", "velocidade"], lambda k: k["vazao"]/3600/k["velocidade"])
+_regra("Potência da bomba (P = ρ·g·Q·H / η)", "densidade", ["potencia", "vazao", "hmt", "rendimento"], lambda k: k["potencia"]*1000*(k["rendimento"]/100)/(G*k["vazao"]/3600*k["hmt"]))
+
 # Índices auxiliares (montados automaticamente a partir das regras)
 REGRAS_POR_SAIDA = {}
 EQUACOES = {}   # equação -> variáveis que participam dela
@@ -386,83 +395,60 @@ for _r in REGRAS:
 # SOLUÇÃO
 # ==========================================
 
-def _propagar(conhecidas):
-    """Aplica as regras até não sair mais nada novo."""
-    valores = dict(conhecidas)
-    calculadas = {}   # variável -> regra que a calculou (na ordem do cálculo)
-    erros = {}        # (variável, equação) -> mensagem
-    mudou = True
-    while mudou:
-        mudou = False
-        for regra in REGRAS:
-            if regra.saida in valores:
-                continue
-            if not all(e in valores for e in regra.entradas):
-                continue
-            try:
-                valores[regra.saida] = regra.funcao(valores)
-            except ValueError as erro:
-                erros[(regra.saida, regra.equacao)] = f"{regra.equacao}: {erro}"
-                continue
-            calculadas[regra.saida] = regra
-            mudou = True
-    return valores, calculadas, erros
+def validar(chave, valor):
+    if chave not in ROTULOS:
+        raise ValueError(f"Variável desconhecida: {chave}")
+    if not math.isfinite(valor):
+        raise ValueError(f"{ROTULOS[chave]}: valor deve ser finito.")
+    livres = {"altura_sucao", "pos_ini", "pos_fin", "tempo_ini", "tempo_fin"}
+    positivos = {"tempo", "diametro", "area", "densidade", "viscosidade", "atrito", "comprimento", "rendimento", "dias"}
+    if chave not in livres and (valor < 0 or (chave in positivos and valor == 0)):
+        raise ValueError(f"{ROTULOS[chave]}: valor fora do domínio físico.")
+    if chave == "rendimento" and valor > 100 or chave == "horas_dia" and valor > 24:
+        raise ValueError(f"{ROTULOS[chave]}: acima do limite permitido.")
+    return valor
 
 
 def resolver(informadas, alvo=None):
-    """
-    informadas: {chave: valor} com o que o usuário tem.
-    alvo: chave da variável desejada, ou None para calcular tudo o que der.
-
-    Devolve um dicionário com:
-      valores        todas as variáveis conhecidas (informadas + calculadas)
-      calculadas     {variável: regra usada}, na ordem do cálculo
-      assumidas      perdas opcionais consideradas 0
-      erros          problemas de valores (divisão por zero, negativo etc.)
-      alternativas   (só com alvo não resolvido) listas do que faltou informar
-      parciais       (só sem alvo) equações que ficaram incompletas
-    """
-    valores, calculadas, erros = _propagar(informadas)
-
-    # Perdas opcionais valem 0, mas só se ainda houver o que calcular
-    zeros = {}
-    if alvo is None or alvo not in valores:
-        zeros = {c: 0.0 for c in OPCIONAIS_ZERO
-                 if c not in valores and c != alvo}
-        if zeros:
-            valores, calculadas, erros = _propagar({**informadas, **zeros})
-
-    com_zeros = dict(valores)
-    usadas = {e for regra in calculadas.values() for e in regra.entradas}
-    assumidas = [c for c in zeros if c in usadas]
-    valores = {c: v for c, v in valores.items()
-               if c not in zeros or c in assumidas}
-
+    """Propagação algébrica; campos ausentes permanecem desconhecidos."""
+    valores = {c: validar(c, v) for c, v in informadas.items()}
+    calculadas, erros = {}, {}
+    while True:
+        mudou = False
+        for r in REGRAS:
+            if r.saida in valores or not all(c in valores for c in r.entradas):
+                continue
+            try:
+                v = validar(r.saida, r.funcao(valores))
+            except (ValueError, ArithmeticError) as e:
+                erros[r.saida, r.equacao] = f"{r.equacao}: {e}"
+                continue
+            valores[r.saida] = v
+            calculadas[r.saida] = r
+            mudou = True
+        if not mudou:
+            break
+    conflitos = {}
+    for r in REGRAS:
+        if r.saida not in valores or not all(c in valores for c in r.entradas):
+            continue
+        try:
+            esperado = r.funcao(valores)
+            if not math.isclose(esperado, valores[r.saida], rel_tol=0.005, abs_tol=1e-9):
+                conflitos.setdefault(r.equacao, f"{r.equacao}: valores incompatíveis (confira {ROTULOS[r.saida]}).")
+        except (ValueError, ArithmeticError):
+            pass
+    if {"tempo_ini", "tempo_fin"} <= valores.keys() and valores["tempo_fin"] <= valores["tempo_ini"]:
+        conflitos["tempo"] = "Tempo final deve ser maior que o inicial."
     alternativas = []
-    if alvo is not None and alvo not in valores:
-        for regra in REGRAS_POR_SAIDA.get(alvo, []):
-            faltam = [e for e in regra.entradas if e not in com_zeros]
-            if faltam and faltam not in alternativas:
-                alternativas.append(faltam)
-        alternativas.sort(key=len)
-        alternativas = alternativas[:3]
-        assumidas = [c for c in zeros
-                     if any(c in r.entradas for r in REGRAS_POR_SAIDA.get(alvo, []))]
-
+    if alvo and alvo not in valores:
+        alternativas = sorted({tuple(c for c in r.entradas if c not in valores) for r in REGRAS_POR_SAIDA.get(alvo, [])}, key=len)[:3]
     parciais = []
-    if alvo is None:
-        for equacao, variaveis in EQUACOES.items():
-            sem_valor = [v for v in variaveis if v not in valores]
-            if len(sem_valor) < len(variaveis) and len(sem_valor) >= 2:
-                parciais.append((equacao, len(sem_valor) - 1, sem_valor))
-
-    return {
-        "alvo": alvo,
-        "alvo_informado": alvo in informadas,
-        "valores": valores,
-        "calculadas": calculadas,
-        "assumidas": assumidas,
-        "erros": [msg for (saida, _), msg in erros.items() if saida not in valores],
-        "alternativas": alternativas,
-        "parciais": parciais,
-    }
+    for eq, vs in EQUACOES.items():
+        faltam = [c for c in vs if c not in valores]
+        if 1 < len(faltam) < len(vs):
+            parciais.append((eq, len(faltam)-1, faltam))
+    return dict(alvo=alvo, alvo_informado=alvo in informadas, valores=valores,
+                calculadas=calculadas, assumidas=[], alternativas=alternativas,
+                parciais=parciais, conflitos=list(conflitos.values()),
+                erros=[m for (c, _), m in erros.items() if c not in valores])
