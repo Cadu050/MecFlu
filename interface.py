@@ -1,12 +1,5 @@
-"""Interface gráfica. Execute este arquivo para abrir o programa.
-
-As telas só leem os campos, chamam as funções de calculos.py
-e mostram o resultado.
-"""
-
 import tkinter as tk
 from tkinter import ttk, messagebox
-
 import calculos
 
 # ==========================================
@@ -20,9 +13,9 @@ BRANCO = "#FFFFFF"
 TEXTO = "#222222"
 CINZA = "#D5DDE6"
 
-FONTE = ("Arial", 11)
-FONTE_NEGRITO = ("Arial", 11, "bold")
-FONTE_TITULO = ("Arial", 15, "bold")
+FONTE = ("Arial", 12)
+FONTE_NEGRITO = ("Arial", 12, "bold")
+FONTE_TITULO = ("Arial", 14, "bold")
 
 AGUARDANDO = "Preencha os campos e clique em Calcular."
 

@@ -1,11 +1,5 @@
-"""Cálculos de Mecânica dos Fluidos.
-
-Este arquivo não conhece a interface: cada função recebe números,
-devolve números e lança ValueError quando um valor não é permitido.
-"""
-
-G = 9.81          # aceleração da gravidade (m/s²)
-RHO_AGUA = 1000   # densidade da água (kg/m³)
+G = 9.81          
+RHO_AGUA = 1000   
 WATTS_POR_CV = 735.5
 
 
